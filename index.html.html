@@ -103,6 +103,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 .photo-add-btn{aspect-ratio:4/3;border:2px dashed var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);font-size:12px;gap:4px;background:var(--gray);transition:all .15s}
 .photo-add-btn:hover{border-color:var(--blue);color:var(--blue)}
 
+/* CHIPS ATTENTE */
+.attente-chip{display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);transition:all .15s;background:var(--white)}
+.attente-chip:has(input:checked){border-color:var(--yellow);background:var(--yellow-light);color:var(--yellow);font-weight:600}
+.attente-chip input{display:none}
+
 /* ── TABLETTE (768–1024px) ── */
 @media(max-width:1024px) and (min-width:769px){
   :root{--sidebar:200px}
@@ -461,8 +466,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
             <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Statut de l'intervention</div>
             <div class="statut-btns">
               <div class="statut-btn btn-orange" id="sb-en_cours" onclick="changeStatut('en_cours')">⚙️ En cours</div>
-              <div class="statut-btn btn-warning" id="sb-en_attente" onclick="changeStatut('en_attente')">⏸️ En attente</div>
-              <div class="statut-btn btn-success" id="sb-termine" onclick="changeStatut('termine')">✅ Terminé</div>
+              <div class="statut-btn btn-warning" id="sb-en_attente" onclick="ouvrirAttente()">⏸️ En attente</div>
+              <div class="statut-btn btn-success" id="sb-termine" onclick="ouvrirTerminer()">✅ Terminer</div>
               <div class="statut-btn btn-secondary" id="sb-planifie" onclick="changeStatut('planifie')">📅 Planifié</div>
             </div>
           </div>
@@ -482,13 +487,25 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           <div style="margin-bottom:16px"><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Description</div><div style="font-size:13px;color:var(--text2);line-height:1.6" id="d-desc">—</div></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px" id="d-infos"></div>
 
-          <!-- PHOTOS -->
+          <!-- PHOTOS AVANT/APRES -->
           <div style="margin-bottom:16px">
             <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">📷 Photos de l'intervention</div>
-            <div class="photos-grid" id="d-photos"></div>
-            <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--blue);font-weight:600;background:var(--gray)" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
-              📷 Ajouter une photo (appareil photo ou galerie)
-              <input type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhoto(event)">
+            <div id="d-photos" class="photos-grid"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+              <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px;border:2px dashed #FFA726;border-radius:8px;cursor:pointer;font-size:12px;color:#E65100;font-weight:600;background:#FFF3E0;text-align:center">
+                📷 Photo AVANT
+                <span style="font-size:10px;font-weight:400;color:var(--text3)">État initial du problème</span>
+                <input type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhotoLabeled(event,'avant')">
+              </label>
+              <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px;border:2px dashed #66BB6A;border-radius:8px;cursor:pointer;font-size:12px;color:#2E7D32;font-weight:600;background:#E8F5E9;text-align:center">
+                📷 Photo APRÈS
+                <span style="font-size:10px;font-weight:400;color:var(--text3)">État après intervention</span>
+                <input type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhotoLabeled(event,'apres')">
+              </label>
+            </div>
+            <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--text3);font-weight:500;background:var(--gray);margin-top:6px">
+              📎 Autre photo
+              <input type="file" accept="image/*" multiple style="display:none" onchange="uploadPhoto(event)">
             </label>
           </div>
 
@@ -509,12 +526,80 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
             <div id="d-tech"></div>
             <select class="form-select" style="font-size:12px;margin-top:10px" id="d-tech-select" onchange="changeTech(this.value)"><option value="">— Changer —</option></select>
           </div>
-          <div class="card" style="padding:16px">
+          <div class="card" style="padding:16px;margin-bottom:14px">
             <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Informations</div>
             <div id="d-side-infos"></div>
           </div>
+          <div id="d-reopen-btn"></div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL EN ATTENTE -->
+<div class="modal-overlay" id="modal-attente" style="display:none" onclick="if(event.target===this)closeModal('attente')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head"><div class="modal-title">⏸️ Mettre en attente</div><button class="modal-close" onclick="closeModal('attente')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Raison de l'attente *</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px" id="attente-raisons">
+          <label class="attente-chip"><input type="radio" name="attente-raison" value="Attente de pièces"> 🔩 Attente de pièces</label>
+          <label class="attente-chip"><input type="radio" name="attente-raison" value="Attente prestataire"> 🏗️ Attente prestataire</label>
+          <label class="attente-chip"><input type="radio" name="attente-raison" value="Attente locataire"> 🏠 Attente locataire</label>
+          <label class="attente-chip"><input type="radio" name="attente-raison" value="Attente devis"> 📋 Attente devis</label>
+          <label class="attente-chip"><input type="radio" name="attente-raison" value="Attente autorisation"> ✅ Attente autorisation</label>
+          <label class="attente-chip"><input type="radio" name="attente-raison" value="Problème accès"> 🔑 Problème accès</label>
+          <label class="attente-chip" style="grid-column:1/-1"><input type="radio" name="attente-raison" value="autre"> ✏️ Autre raison</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Votre nom *</label>
+        <input class="form-input" id="attente-auteur" placeholder="Prénom Nom">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Commentaire obligatoire *</label>
+        <textarea class="form-textarea" id="attente-comment" placeholder="Précisez la situation, la date de reprise prévue…" style="min-height:90px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('attente')">Annuler</button>
+      <button class="btn btn-warning" onclick="confirmerAttente()">⏸️ Confirmer l'attente</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TERMINER BON -->
+<div class="modal-overlay" id="modal-terminer" style="display:none" onclick="if(event.target===this)closeModal('terminer')">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-head"><div class="modal-title">✅ Clôturer l'intervention</div><button class="modal-close" onclick="closeModal('terminer')">✕</button></div>
+    <div class="modal-body">
+      <div style="background:var(--green-light);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--green)">
+        ✅ Vous êtes sur le point de clôturer ce bon de travail.
+      </div>
+      <div class="form-group">
+        <label class="form-label">Votre nom *</label>
+        <input class="form-input" id="terminer-auteur" placeholder="Prénom Nom">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📷 Photo APRÈS intervention (optionnel)</label>
+        <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px;border:2px dashed #66BB6A;border-radius:8px;cursor:pointer;font-size:13px;color:#2E7D32;font-weight:600;background:#E8F5E9">
+          📷 Ajouter la photo finale
+          <span style="font-size:11px;font-weight:400;color:var(--text3)">Preuve de l'intervention réalisée</span>
+          <input type="file" accept="image/*" capture="environment" style="display:none" id="terminer-photo" onchange="previewTerminerPhoto(event)">
+        </label>
+        <div id="terminer-photo-preview" style="margin-top:8px"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Commentaire de clôture (optionnel)</label>
+        <textarea class="form-textarea" id="terminer-comment" placeholder="Décrivez le travail réalisé…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('terminer')">Annuler</button>
+      <button class="btn btn-success" onclick="confirmerTerminer()">✅ Clôturer le bon</button>
     </div>
   </div>
 </div>
@@ -849,11 +934,18 @@ async function openDetail(id){
 
   // Photos
   const {data:photos}=await sb.from('photos').select('*').eq('bon_id',id).order('created_at')
-  document.getElementById('d-photos').innerHTML=(photos||[]).map(p=>`
-    <div class="photo-item">
-      <a href="${p.url}" target="_blank"><img src="${p.url}" alt="photo"></a>
+  document.getElementById('d-photos').innerHTML=(photos||[]).map(p=>{
+    const labelColor=p.legende==='AVANT'?'#E65100':p.legende==='APRÈS'||p.legende==='APRES'?'#2E7D32':null
+    const labelBg=p.legende==='AVANT'?'#FFF3E0':p.legende==='APRÈS'||p.legende==='APRES'?'#E8F5E9':null
+    return `<div class="photo-item">
+      <a href="${p.url}" target="_blank"><img src="${p.url}" alt="${p.legende||'photo'}"></a>
+      ${p.legende?`<div style="position:absolute;bottom:0;left:0;right:0;background:${labelBg};color:${labelColor};font-size:10px;font-weight:700;text-align:center;padding:2px">${p.legende}</div>`:''}
       <button class="photo-delete" onclick="deletePhoto('${p.id}','${p.url}',event)">✕</button>
-    </div>`).join('')
+    </div>`
+  }).join('')
+
+  // Bouton réouvrir si terminé/annulé
+  updateReopenBtn(b.statut)
 
   // Commentaires
   const {data:comments}=await sb.from('commentaires').select('*').eq('bon_id',id).order('created_at')
@@ -873,12 +965,124 @@ async function changeStatut(statut){
   document.querySelectorAll('.statut-btn').forEach(b=>b.classList.remove('active'))
   const sb2=document.getElementById('sb-'+statut)
   if(sb2) sb2.classList.add('active')
-  document.getElementById('d-badges').innerHTML=badge(statut)+' '+badge((allBons.find(b=>b.id===currentBonId)||{}).priorite||'normale')
+  const bon=allBons.find(b=>b.id===currentBonId)||{}
+  document.getElementById('d-badges').innerHTML=badge(statut)+' '+badge(bon.priorite||'normale')
   await loadBons(); renderDashboard(); renderBonsTable()
   showToast('Statut mis à jour : '+STATUT_LABEL[statut])
   if(statut==='en_cours') chronoStart()
   if(statut==='en_attente') chronoPause()
-  if(statut==='termine') chronoStop()
+  if(statut==='termine'){ chronoStop(); updateReopenBtn(statut) }
+  updateReopenBtn(statut)
+}
+
+function updateReopenBtn(statut){
+  const el=document.getElementById('d-reopen-btn')
+  if(!el) return
+  if(statut==='termine'||statut==='annule'){
+    el.innerHTML=`<button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:0" onclick="reopenBon()">🔄 Réouvrir ce bon</button>`
+  } else {
+    el.innerHTML=''
+  }
+}
+
+async function reopenBon(){
+  if(!currentBonId) return
+  if(!confirm('Réouvrir ce bon de travail ?')) return
+  await sb.from('bons_travail').update({statut:'planifie',date_fin:null}).eq('id',currentBonId)
+  await loadBons(); renderDashboard(); renderBonsTable()
+  showToast('Bon réouvert !')
+  // Recharger le détail
+  await openDetail(currentBonId)
+}
+
+function ouvrirAttente(){
+  document.getElementById('attente-auteur').value=''
+  document.getElementById('attente-comment').value=''
+  document.querySelectorAll('input[name="attente-raison"]').forEach(r=>r.checked=false)
+  openModal('attente')
+}
+
+async function confirmerAttente(){
+  const raison=document.querySelector('input[name="attente-raison"]:checked')?.value
+  const auteur=document.getElementById('attente-auteur').value.trim()
+  const comment=document.getElementById('attente-comment').value.trim()
+  if(!raison){showToast('Veuillez choisir une raison','error');return}
+  if(!auteur){showToast('Veuillez indiquer votre nom','error');return}
+  if(!comment){showToast('Le commentaire est obligatoire','error');return}
+  // Enregistrer statut + commentaire automatique
+  await sb.from('bons_travail').update({statut:'en_attente'}).eq('id',currentBonId)
+  const contenu=`⏸️ Mise en attente — ${raison}\n${comment}`
+  await sb.from('commentaires').insert([{bon_id:currentBonId,auteur,contenu}])
+  await loadBons(); renderDashboard(); renderBonsTable()
+  closeModal('attente')
+  showToast('Bon mis en attente : '+raison)
+  chronoPause()
+  await openDetail(currentBonId)
+}
+
+function ouvrirTerminer(){
+  document.getElementById('terminer-auteur').value=''
+  document.getElementById('terminer-comment').value=''
+  document.getElementById('terminer-photo-preview').innerHTML=''
+  document.getElementById('terminer-photo').value=''
+  openModal('terminer')
+}
+
+function previewTerminerPhoto(e){
+  const file=e.target.files[0]
+  if(!file) return
+  const url=URL.createObjectURL(file)
+  document.getElementById('terminer-photo-preview').innerHTML=`<img src="${url}" style="width:100%;max-height:150px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">`
+}
+
+async function confirmerTerminer(){
+  const auteur=document.getElementById('terminer-auteur').value.trim()
+  if(!auteur){showToast('Veuillez indiquer votre nom','error');return}
+  const comment=document.getElementById('terminer-comment').value.trim()
+  const photoFile=document.getElementById('terminer-photo').files[0]
+  const dureeH=parseFloat((chronoSeconds/3600).toFixed(2))
+
+  // Upload photo si présente
+  if(photoFile){
+    const ext=photoFile.name.split('.').pop()
+    const path=`${currentBonId}/${Date.now()}_apres.${ext}`
+    const {error:upErr}=await sb.storage.from('photos').upload(path,photoFile)
+    if(!upErr){
+      const {data:{publicUrl}}=sb.storage.from('photos').getPublicUrl(path)
+      await sb.from('photos').insert([{bon_id:currentBonId,url:publicUrl,legende:'APRÈS'}])
+    }
+  }
+
+  // Mettre à jour le bon
+  const extra={statut:'termine',date_fin:new Date().toISOString()}
+  if(chronoSeconds>0) extra.duree_reelle=dureeH
+  await sb.from('bons_travail').update(extra).eq('id',currentBonId)
+
+  // Ajouter commentaire de clôture
+  const contenu=comment?`✅ Intervention terminée — ${comment}`:`✅ Intervention terminée par ${auteur}`
+  await sb.from('commentaires').insert([{bon_id:currentBonId,auteur,contenu}])
+
+  chronoStop()
+  await loadBons(); await loadBonPhotos(); renderDashboard(); renderBonsTable()
+  closeModal('terminer')
+  closeModal('detail')
+  showToast(`✅ Bon clôturé ! Durée : ${chronoSeconds>0?formatChrono(chronoSeconds):'—'}`)
+}
+
+// Upload photo avec label avant/après
+async function uploadPhotoLabeled(e, label){
+  const file=e.target.files[0]
+  if(!file||!currentBonId) return
+  showToast('Upload en cours…')
+  const ext=file.name.split('.').pop()
+  const path=`${currentBonId}/${Date.now()}_${label}.${ext}`
+  const {error}=await sb.storage.from('photos').upload(path,file)
+  if(!error){
+    const {data:{publicUrl}}=sb.storage.from('photos').getPublicUrl(path)
+    await sb.from('photos').insert([{bon_id:currentBonId,url:publicUrl,legende:label.toUpperCase()}])
+    await openDetail(currentBonId)
+    showToast(`📷 Photo ${label.toUpperCase()} ajoutée !`)
+  } else showToast('Erreur upload','error')
 }
 
 async function changeTech(technicien_id){
