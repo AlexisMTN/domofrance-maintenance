@@ -455,6 +455,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
             <div id="d-side-infos"></div>
           </div>
           <div id="d-reopen-btn"></div>
+          <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:8px;font-size:12px;padding:8px" onclick="ouvrirSuppression()">🗑️ Supprimer ce bon</button>
+          <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:8px;font-size:12px" onclick="ouvrirSuppression()">🗑️ Supprimer ce bon</button>
         </div>
       </div>
     </div>
@@ -558,6 +560,58 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('recurrence')">Annuler</button>
       <button class="btn btn-primary" onclick="saveRecurrence()">✓ Créer la récurrence</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SUPPRESSION BON -->
+<div class="modal-overlay" id="modal-supprimer" style="display:none" onclick="if(event.target===this)closeModal('supprimer')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-head">
+      <div class="modal-title">🗑️ Supprimer ce bon</div>
+      <button class="modal-close" onclick="closeModal('supprimer')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--red-light);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red);font-weight:500">
+        ⚠️ Cette action est irréversible. Le bon et toutes ses photos seront définitivement supprimés.
+      </div>
+      <div id="supp-bon-info" style="background:var(--gray);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--text2)"></div>
+      <div class="form-group">
+        <label class="form-label">Code de suppression *</label>
+        <input type="password" class="form-input" id="supp-code" placeholder="Entrez le code" style="font-size:18px;letter-spacing:4px;text-align:center" onkeydown="if(event.key==='Enter')confirmerSuppression()">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Code confidentiel réservé aux responsables</div>
+      </div>
+      <div id="supp-error" style="display:none;background:var(--red-light);color:var(--red);border-radius:6px;padding:8px 12px;font-size:12px;margin-top:8px">❌ Code incorrect</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('supprimer')">Annuler</button>
+      <button class="btn btn-danger" onclick="confirmerSuppression()">🗑️ Supprimer définitivement</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SUPPRESSION BON -->
+<div class="modal-overlay" id="modal-supprimer" style="display:none" onclick="if(event.target===this)closeModal('supprimer')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-head">
+      <div class="modal-title">🗑️ Supprimer ce bon</div>
+      <button class="modal-close" onclick="closeModal('supprimer')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--red-light);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red);font-weight:500">
+        ⚠️ Action irréversible. Le bon et toutes ses photos seront définitivement supprimés.
+      </div>
+      <div id="supp-bon-info" style="background:var(--gray);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--text2)"></div>
+      <div class="form-group">
+        <label class="form-label">Code de suppression *</label>
+        <input type="password" class="form-input" id="supp-code" placeholder="••••••" style="font-size:20px;letter-spacing:6px;text-align:center" onkeydown="if(event.key==='Enter')confirmerSuppression()">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Code confidentiel réservé aux responsables</div>
+      </div>
+      <div id="supp-error" style="display:none;background:var(--red-light);color:var(--red);border-radius:6px;padding:8px 12px;font-size:12px;margin-top:8px">❌ Code incorrect — réessayez</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('supprimer')">Annuler</button>
+      <button class="btn btn-danger" onclick="confirmerSuppression()">🗑️ Supprimer définitivement</button>
     </div>
   </div>
 </div>
@@ -1684,6 +1738,61 @@ function notifierAssignation(bon,techNom){
     '#'+bon.numero+' — '+bon.titre,
     '/icon-192.png'
   )
+}
+
+
+// ── SUPPRESSION BON ──
+const CODE_SUPPRESSION = 'DOMOFRANCE2025'
+
+function ouvrirSuppression(){
+  const bon=allBons.find(b=>b.id===currentBonId)
+  if(!bon) return
+  document.getElementById('supp-bon-info').innerHTML=
+    '<strong>#'+(bon.numero||'—')+' — '+bon.titre+'</strong><br>'
+    +'<span style="color:var(--text3)">'+(bon.batiments?.nom||'—')+(bon.zone?' · '+bon.zone:'')+'</span>'
+  document.getElementById('supp-code').value=''
+  document.getElementById('supp-error').style.display='none'
+  openModal('supprimer')
+  setTimeout(()=>document.getElementById('supp-code').focus(),200)
+}
+
+async function confirmerSuppression(){
+  const code=document.getElementById('supp-code').value.trim().toUpperCase()
+  const errEl=document.getElementById('supp-error')
+  
+  if(code!==CODE_SUPPRESSION){
+    errEl.style.display='block'
+    document.getElementById('supp-code').value=''
+    document.getElementById('supp-code').focus()
+    // Shake animation
+    const input=document.getElementById('supp-code')
+    input.style.transition='transform .1s'
+    input.style.transform='translateX(8px)'
+    setTimeout(()=>input.style.transform='translateX(-8px)',100)
+    setTimeout(()=>input.style.transform='',200)
+    return
+  }
+  
+  errEl.style.display='none'
+  
+  // Supprimer photos du storage
+  const {data:photos}=await sb.from('photos').select('url').eq('bon_id',currentBonId)
+  if(photos&&photos.length>0){
+    const paths=photos.map(p=>{
+      try{const u=new URL(p.url);return u.pathname.split('/photos/')[1]}catch(e){return null}
+    }).filter(Boolean)
+    if(paths.length>0) await sb.storage.from('photos').remove(paths)
+  }
+  
+  // Supprimer commentaires, photos DB, puis bon
+  await sb.from('commentaires').delete().eq('bon_id',currentBonId)
+  await sb.from('photos').delete().eq('bon_id',currentBonId)
+  await sb.from('bons_travail').delete().eq('id',currentBonId)
+  
+  closeModal('supprimer')
+  closeModal('detail')
+  await loadBons();await loadBonPhotos();renderDashboard();renderBonsTable()
+  showToast('Bon supprimé définitivement')
 }
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
