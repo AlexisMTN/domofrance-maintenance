@@ -11,11 +11,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--blue:#1565C0;--blue-light:#E3F2FD;--green:#2E7D32;--green-light:#E8F5E9;--orange:#E65100;--orange-light:#FFF3E0;--red:#C62828;--red-light:#FFEBEE;--gray:#F5F6FA;--gray2:#ECEFF1;--gray3:#B0BEC5;--text:#1A237E;--text2:#546E7A;--text3:#90A4AE;--white:#fff;--border:#E0E7EF;--sidebar:220px;--header:60px}
+:root{--blue:#1565C0;--blue-light:#E3F2FD;--green:#2E7D32;--green-light:#E8F5E9;--orange:#E65100;--orange-light:#FFF3E0;--red:#C62828;--red-light:#FFEBEE;--yellow:#F57F17;--yellow-light:#FFF8E1;--gray:#F5F6FA;--gray2:#ECEFF1;--gray3:#B0BEC5;--text:#1A237E;--text2:#546E7A;--text3:#90A4AE;--white:#fff;--border:#E0E7EF;--sidebar:220px;--header:60px}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:var(--text);min-height:100vh}
 .app{display:flex;min-height:100vh}
 .sidebar{width:var(--sidebar);background:var(--blue);min-height:100vh;position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column;transition:transform .25s}
-.sidebar.closed{transform:translateX(-100%)}
 .sidebar-logo{padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
 .logo-title{color:#fff;font-size:17px;font-weight:700}
 .logo-sub{color:rgba(255,255,255,.55);font-size:11px;margin-top:2px}
@@ -47,13 +46,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 .badge-urgence{background:var(--red-light);color:var(--red)}
 .badge-en_cours{background:var(--orange-light);color:var(--orange)}
 .badge-planifie{background:var(--blue-light);color:var(--blue)}
+.badge-en_attente{background:var(--yellow-light);color:var(--yellow)}
 .badge-termine{background:var(--green-light);color:var(--green)}
+.badge-annule{background:var(--gray2);color:var(--gray3)}
 .btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
-.btn-primary{background:var(--blue);color:#fff}
-.btn-primary:hover{background:#1976D2}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#1976D2}
 .btn-secondary{background:var(--gray2);color:var(--text2)}
 .btn-success{background:var(--green-light);color:var(--green)}
 .btn-danger{background:var(--red-light);color:var(--red)}
+.btn-warning{background:var(--yellow-light);color:var(--yellow)}
+.btn-orange{background:var(--orange-light);color:var(--orange)}
 .table{width:100%;border-collapse:collapse}
 .table th{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--gray)}
 .table td{padding:12px 14px;font-size:13px;color:var(--text);border-bottom:1px solid var(--gray2);vertical-align:middle}
@@ -65,7 +67,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 .form-textarea{resize:vertical;min-height:80px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
-.modal{background:var(--white);border-radius:14px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto}
+.modal{background:var(--white);border-radius:14px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto}
 .modal-head{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}
 .modal-title{font-size:16px;font-weight:700;color:var(--text)}
 .modal-close{background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer}
@@ -81,11 +83,32 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 .filter-tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
 .progress-bar{height:6px;background:var(--gray2);border-radius:3px;overflow:hidden}
 .progress-fill{height:100%;border-radius:3px;background:var(--blue);transition:width .5s}
+
+/* CHRONOMETRE */
+.chrono-box{background:linear-gradient(135deg,#1565C0,#0D47A1);border-radius:12px;padding:16px 20px;color:#fff;margin-bottom:16px;text-align:center}
+.chrono-time{font-size:36px;font-weight:700;letter-spacing:2px;font-family:monospace}
+.chrono-label{font-size:11px;opacity:.7;margin-top:4px;text-transform:uppercase;letter-spacing:1px}
+.chrono-btns{display:flex;gap:8px;justify-content:center;margin-top:12px}
+
+/* STATUT BOUTONS */
+.statut-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.statut-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;border:2px solid transparent;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
+.statut-btn.active{border-color:currentColor;transform:scale(1.02)}
+
+/* PHOTOS GRID */
+.photos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.photo-item{position:relative;aspect-ratio:4/3;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.photo-item img{width:100%;height:100%;object-fit:cover}
+.photo-delete{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+.photo-add-btn{aspect-ratio:4/3;border:2px dashed var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);font-size:12px;gap:4px;background:var(--gray);transition:all .15s}
+.photo-add-btn:hover{border-color:var(--blue);color:var(--blue)}
+
 @media(max-width:768px){
   .sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}
   .main{margin-left:0}.menu-btn{display:flex}
   .stats-grid{grid-template-columns:repeat(2,1fr)}.form-row{grid-template-columns:1fr}
   .content{padding:16px}.topbar{padding:0 16px}
+  .statut-btns{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
@@ -153,14 +176,15 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
       <div class="page" id="page-bons">
         <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
           <button class="filter-tab active" onclick="filterBons('all',this)">Tous</button>
-          <button class="filter-tab" onclick="filterBons('urgence',this)">Urgence</button>
-          <button class="filter-tab" onclick="filterBons('en_cours',this)">En cours</button>
-          <button class="filter-tab" onclick="filterBons('planifie',this)">Planifié</button>
-          <button class="filter-tab" onclick="filterBons('termine',this)">Terminé</button>
+          <button class="filter-tab" onclick="filterBons('urgence',this)">🔴 Urgence</button>
+          <button class="filter-tab" onclick="filterBons('en_cours',this)">⚙️ En cours</button>
+          <button class="filter-tab" onclick="filterBons('en_attente',this)">⏸️ En attente</button>
+          <button class="filter-tab" onclick="filterBons('planifie',this)">📅 Planifié</button>
+          <button class="filter-tab" onclick="filterBons('termine',this)">✅ Terminé</button>
           <input id="search-input" class="form-input" placeholder="Rechercher…" style="margin-left:auto;width:200px" oninput="renderBonsTable()">
         </div>
         <div class="card"><div style="overflow-x:auto">
-          <table class="table"><thead><tr><th>N°</th><th>Titre</th><th>Bâtiment</th><th>Technicien</th><th>Priorité</th><th>Statut</th><th>Date</th></tr></thead>
+          <table class="table"><thead><tr><th>N°</th><th>Titre</th><th>Bâtiment</th><th>Technicien</th><th>Priorité</th><th>Statut</th><th>Durée</th><th>Date</th></tr></thead>
           <tbody id="bons-tbody"></tbody></table>
         </div></div>
       </div>
@@ -219,12 +243,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
   <div class="modal">
     <div class="modal-head"><div class="modal-title">Nouveau bon de travail</div><button class="modal-close" onclick="closeModal('create')">✕</button></div>
     <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group" style="grid-column:1/-1"><label class="form-label">Titre *</label><input class="form-input" id="f-titre" placeholder="Ex: Fuite d'eau salle de bain"></div>
-      </div>
+      <div class="form-group"><label class="form-label">Titre *</label><input class="form-input" id="f-titre" placeholder="Ex: Fuite d'eau salle de bain"></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Catégorie</label><select class="form-select" id="f-cat"><option>Plomberie</option><option>Électricité</option><option>Serrurerie</option><option>Peinture</option><option>Chauffage/VMC</option><option>Espaces communs</option><option>Autre</option></select></div>
-        <div class="form-group"><label class="form-label">Priorité</label><select class="form-select" id="f-prio"><option value="urgence">Urgence</option><option value="haute">Haute</option><option value="normale" selected>Normale</option><option value="basse">Basse</option></select></div>
+        <div class="form-group"><label class="form-label">Priorité</label><select class="form-select" id="f-prio"><option value="urgence">🔴 Urgence</option><option value="haute">🟠 Haute</option><option value="normale" selected>🟡 Normale</option><option value="basse">🟢 Basse</option></select></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Bâtiment</label><select class="form-select" id="f-bat"><option value="">— Sélectionner —</option></select></div>
@@ -245,31 +267,61 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 
 <!-- MODAL DETAIL BON -->
 <div class="modal-overlay" id="modal-detail" style="display:none" onclick="if(event.target===this)closeModal('detail')">
-  <div class="modal" style="max-width:700px">
+  <div class="modal" style="max-width:750px">
     <div class="modal-head">
-      <div><div class="modal-title" id="d-titre"></div><div style="margin-top:6px" id="d-badges"></div></div>
+      <div><div class="modal-title" id="d-titre"></div><div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap" id="d-badges"></div></div>
       <button class="modal-close" onclick="closeModal('detail')">✕</button>
     </div>
     <div class="modal-body">
-      <div style="display:grid;grid-template-columns:1fr 280px;gap:20px">
+      <div style="display:grid;grid-template-columns:1fr 300px;gap:20px">
         <div>
+          <!-- STATUT BOUTONS -->
+          <div style="margin-bottom:16px">
+            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Statut de l'intervention</div>
+            <div class="statut-btns">
+              <div class="statut-btn btn-orange" id="sb-en_cours" onclick="changeStatut('en_cours')">⚙️ En cours</div>
+              <div class="statut-btn btn-warning" id="sb-en_attente" onclick="changeStatut('en_attente')">⏸️ En attente</div>
+              <div class="statut-btn btn-success" id="sb-termine" onclick="changeStatut('termine')">✅ Terminé</div>
+              <div class="statut-btn btn-secondary" id="sb-planifie" onclick="changeStatut('planifie')">📅 Planifié</div>
+            </div>
+          </div>
+
+          <!-- CHRONOMETRE -->
+          <div class="chrono-box" id="chrono-box">
+            <div class="chrono-label">Durée d'intervention</div>
+            <div class="chrono-time" id="chrono-display">00:00:00</div>
+            <div class="chrono-btns">
+              <button class="btn btn-secondary" style="font-size:12px;padding:6px 14px" onclick="chronoStart()" id="btn-start">▶ Démarrer</button>
+              <button class="btn btn-warning" style="font-size:12px;padding:6px 14px" onclick="chronoPause()" id="btn-pause" disabled>⏸ Pause</button>
+              <button class="btn btn-danger" style="font-size:12px;padding:6px 14px" onclick="chronoStop()" id="btn-stop" disabled>⏹ Terminer</button>
+            </div>
+          </div>
+
+          <!-- INFOS -->
           <div style="margin-bottom:16px"><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Description</div><div style="font-size:13px;color:var(--text2);line-height:1.6" id="d-desc">—</div></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px" id="d-infos"></div>
+
+          <!-- PHOTOS -->
           <div style="margin-bottom:16px">
-            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Photos</div>
-            <div id="d-photos" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-            <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:13px;color:var(--blue);font-weight:600">
-              📷 Ajouter une photo<input type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhoto(event)">
+            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">📷 Photos de l'intervention</div>
+            <div class="photos-grid" id="d-photos"></div>
+            <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--blue);font-weight:600;background:var(--gray)" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+              📷 Ajouter une photo (appareil photo ou galerie)
+              <input type="file" accept="image/*" capture="environment" style="display:none" onchange="uploadPhoto(event)">
             </label>
           </div>
+
+          <!-- COMMENTAIRES -->
           <div>
-            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Commentaires</div>
+            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">💬 Commentaires</div>
             <div id="d-comments" style="margin-bottom:12px"></div>
             <input class="form-input" id="c-auteur" placeholder="Votre nom" style="margin-bottom:8px">
-            <textarea class="form-textarea" id="c-text" placeholder="Ajouter une note…" style="margin-bottom:8px"></textarea>
+            <textarea class="form-textarea" id="c-text" placeholder="Ajouter une note, remarque, info…" style="margin-bottom:8px"></textarea>
             <button class="btn btn-primary" style="font-size:12px;padding:8px 14px" onclick="addComment()">Envoyer</button>
           </div>
         </div>
+
+        <!-- COLONNE DROITE -->
         <div>
           <div class="card" style="padding:16px;margin-bottom:14px">
             <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:12px">Technicien</div>
@@ -277,13 +329,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
             <select class="form-select" style="font-size:12px;margin-top:10px" id="d-tech-select" onchange="changeTech(this.value)"><option value="">— Changer —</option></select>
           </div>
           <div class="card" style="padding:16px">
-            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:12px">Changer le statut</div>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <button class="btn btn-secondary" style="justify-content:center" onclick="changeStatut('planifie')">📅 Planifié</button>
-              <button class="btn btn-secondary" style="justify-content:center" onclick="changeStatut('en_cours')">⚙️ En cours</button>
-              <button class="btn btn-success" style="justify-content:center" onclick="changeStatut('termine')">✅ Terminé</button>
-              <button class="btn btn-danger" style="justify-content:center" onclick="changeStatut('annule')">❌ Annulé</button>
-            </div>
+            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Informations</div>
+            <div id="d-side-infos"></div>
           </div>
         </div>
       </div>
@@ -337,77 +384,131 @@ const SUPABASE_URL = 'https://eomijzmsevgyyeroqdbo.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_4N6hRNVA5ibzbKAi30_Txg_VIYS4okb'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-let allBons = [], allTechs = [], allBats = []
-let currentFilter = 'all', currentBonId = null
-let calDate = new Date()
+let allBons=[], allTechs=[], allBats=[]
+let currentFilter='all', currentBonId=null
+let calDate=new Date()
 
-const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
-const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
-const STATUT_LABEL = {planifie:'Planifié',en_cours:'En cours',termine:'Terminé',annule:'Annulé',urgence:'Urgence'}
+// CHRONOMETRE
+let chronoInterval=null, chronoSeconds=0, chronoRunning=false, chronoStartTime=null
 
-async function init() {
-  await Promise.all([loadBons(), loadTechs(), loadBats()])
-  renderDashboard()
-  renderCalendar()
+function chronoStart(){
+  if(chronoRunning) return
+  chronoRunning=true
+  chronoStartTime=chronoStartTime||new Date()
+  chronoInterval=setInterval(()=>{
+    chronoSeconds++
+    document.getElementById('chrono-display').textContent=formatChrono(chronoSeconds)
+  },1000)
+  document.getElementById('btn-start').disabled=true
+  document.getElementById('btn-pause').disabled=false
+  document.getElementById('btn-stop').disabled=false
+  if(currentBonId) sb.from('bons_travail').update({statut:'en_cours',date_debut:chronoStartTime.toISOString()}).eq('id',currentBonId).then(()=>{loadBons();renderDashboard();renderBonsTable()})
+}
 
+function chronoPause(){
+  if(!chronoRunning) return
+  clearInterval(chronoInterval)
+  chronoRunning=false
+  document.getElementById('btn-start').disabled=false
+  document.getElementById('btn-start').textContent='▶ Reprendre'
+  document.getElementById('btn-pause').disabled=true
+  if(currentBonId) sb.from('bons_travail').update({statut:'en_attente'}).eq('id',currentBonId).then(()=>{loadBons();renderDashboard();renderBonsTable()})
+}
+
+function chronoStop(){
+  clearInterval(chronoInterval)
+  chronoRunning=false
+  const dureeH=parseFloat((chronoSeconds/3600).toFixed(2))
+  if(currentBonId){
+    sb.from('bons_travail').update({statut:'termine',date_fin:new Date().toISOString(),duree_reelle:dureeH}).eq('id',currentBonId).then(()=>{
+      loadBons();renderDashboard();renderBonsTable()
+      showToast(`✅ Intervention terminée — Durée : ${formatChrono(chronoSeconds)}`)
+    })
+  }
+  document.getElementById('btn-start').disabled=false
+  document.getElementById('btn-start').textContent='▶ Démarrer'
+  document.getElementById('btn-pause').disabled=true
+  document.getElementById('btn-stop').disabled=true
+}
+
+function formatChrono(s){
+  const h=Math.floor(s/3600).toString().padStart(2,'0')
+  const m=Math.floor((s%3600)/60).toString().padStart(2,'0')
+  const sec=(s%60).toString().padStart(2,'0')
+  return `${h}:${m}:${sec}`
+}
+
+function resetChrono(){
+  clearInterval(chronoInterval)
+  chronoSeconds=0; chronoRunning=false; chronoStartTime=null
+  document.getElementById('chrono-display').textContent='00:00:00'
+  document.getElementById('btn-start').disabled=false
+  document.getElementById('btn-start').textContent='▶ Démarrer'
+  document.getElementById('btn-pause').disabled=true
+  document.getElementById('btn-stop').disabled=true
+}
+
+const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+const JOURS=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
+const STATUT_LABEL={planifie:'Planifié',en_cours:'En cours',en_attente:'En attente',termine:'Terminé',annule:'Annulé',urgence:'Urgence'}
+
+async function init(){
+  await Promise.all([loadBons(),loadTechs(),loadBats()])
+  renderDashboard(); renderCalendar()
   sb.channel('bons').on('postgres_changes',{event:'*',schema:'public',table:'bons_travail'},()=>{loadBons().then(()=>{renderDashboard();renderBonsTable();renderStats()})}).subscribe()
 }
 
-async function loadBons() {
-  const {data} = await sb.from('bons_travail').select('*,batiments(nom),techniciens(nom,prenom,telephone)').order('created_at',{ascending:false})
-  if(data) allBons = data
+async function loadBons(){
+  const {data}=await sb.from('bons_travail').select('*,batiments(nom),techniciens(nom,prenom,telephone)').order('created_at',{ascending:false})
+  if(data) allBons=data
   updateUrgentBadge()
 }
-async function loadTechs() {
-  const {data} = await sb.from('techniciens').select('*').order('nom')
-  if(data) allTechs = data
+async function loadTechs(){
+  const {data}=await sb.from('techniciens').select('*').order('nom')
+  if(data) allTechs=data
   populateTechSelects()
 }
-async function loadBats() {
-  const {data} = await sb.from('batiments').select('*').order('nom')
-  if(data) allBats = data
+async function loadBats(){
+  const {data}=await sb.from('batiments').select('*').order('nom')
+  if(data) allBats=data
   populateBatSelect()
 }
 
-function updateUrgentBadge() {
-  const n = allBons.filter(b=>b.priorite==='urgence'&&b.statut!=='termine'&&b.statut!=='annule').length
-  const el = document.getElementById('urgent-badge')
-  el.textContent = n; el.style.display = n>0?'inline':'none'
+function updateUrgentBadge(){
+  const n=allBons.filter(b=>b.priorite==='urgence'&&b.statut!=='termine'&&b.statut!=='annule').length
+  const el=document.getElementById('urgent-badge')
+  el.textContent=n; el.style.display=n>0?'inline':'none'
 }
 
-function populateTechSelects() {
-  const opts = allTechs.map(t=>`<option value="${t.id}">${t.prenom} ${t.nom}</option>`).join('')
-  document.getElementById('f-tech').innerHTML = '<option value="">— Non assigné —</option>'+opts
-  document.getElementById('d-tech-select').innerHTML = '<option value="">— Changer —</option>'+opts
+function populateTechSelects(){
+  const opts=allTechs.map(t=>`<option value="${t.id}">${t.prenom} ${t.nom}</option>`).join('')
+  document.getElementById('f-tech').innerHTML='<option value="">— Non assigné —</option>'+opts
+  document.getElementById('d-tech-select').innerHTML='<option value="">— Changer —</option>'+opts
 }
-function populateBatSelect() {
-  document.getElementById('f-bat').innerHTML = '<option value="">— Sélectionner —</option>'+allBats.map(b=>`<option value="${b.id}">${b.nom}</option>`).join('')
+function populateBatSelect(){
+  document.getElementById('f-bat').innerHTML='<option value="">— Sélectionner —</option>'+allBats.map(b=>`<option value="${b.id}">${b.nom}</option>`).join('')
 }
 
-function badge(v) {
-  const map = {planifie:'planifie',en_cours:'en_cours',termine:'termine',annule:'planifie',urgence:'urgence',haute:'urgence',normale:'planifie',basse:'termine'}
+function badge(v){
+  const map={planifie:'planifie',en_cours:'en_cours',en_attente:'en_attente',termine:'termine',annule:'annule',urgence:'urgence',haute:'urgence',normale:'planifie',basse:'termine'}
   return `<span class="badge badge-${map[v]||'planifie'}">${STATUT_LABEL[v]||v}</span>`
 }
 
-function renderDashboard() {
-  const active = allBons.filter(b=>b.statut!=='termine'&&b.statut!=='annule')
-  document.getElementById('stat-total').textContent = active.length
-  document.getElementById('stat-urgents').textContent = allBons.filter(b=>b.priorite==='urgence'&&b.statut!=='termine').length
-  document.getElementById('stat-encours').textContent = allBons.filter(b=>b.statut==='en_cours').length
-  document.getElementById('stat-termines').textContent = allBons.filter(b=>b.statut==='termine').length
-
-  const dashBons = document.getElementById('dash-bons')
-  dashBons.innerHTML = allBons.slice(0,6).map(b=>`
+function renderDashboard(){
+  const active=allBons.filter(b=>b.statut!=='termine'&&b.statut!=='annule')
+  document.getElementById('stat-total').textContent=active.length
+  document.getElementById('stat-urgents').textContent=allBons.filter(b=>b.priorite==='urgence'&&b.statut!=='termine').length
+  document.getElementById('stat-encours').textContent=allBons.filter(b=>b.statut==='en_cours').length
+  document.getElementById('stat-termines').textContent=allBons.filter(b=>b.statut==='termine').length
+  const sc={disponible:'#66BB6A',en_intervention:'#FFA726',hors_service:'#B0BEC5'}
+  const sl={disponible:'Disponible',en_intervention:'En intervention',hors_service:'Hors service'}
+  document.getElementById('dash-bons').innerHTML=allBons.slice(0,6).map(b=>`
     <div onclick="openDetail('${b.id}')" style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--gray2);cursor:pointer" onmouseover="this.style.background='var(--gray)'" onmouseout="this.style.background=''">
-      <div style="width:9px;height:9px;border-radius:50%;background:${b.priorite==='urgence'?'#EF5350':b.statut==='en_cours'?'#FFA726':b.statut==='termine'?'#66BB6A':'#42A5F5'};flex-shrink:0"></div>
+      <div style="width:9px;height:9px;border-radius:50%;background:${b.priorite==='urgence'?'#EF5350':b.statut==='en_cours'?'#FFA726':b.statut==='termine'?'#66BB6A':b.statut==='en_attente'?'#F9A825':'#42A5F5'};flex-shrink:0"></div>
       <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.titre}</div><div style="font-size:11px;color:var(--text3)">${b.batiments?.nom||'—'}</div></div>
-      ${badge(b.priorite==='urgence'?'urgence':b.statut)}
+      ${badge(b.statut)}
     </div>`).join('')
-
-  const dashTechs = document.getElementById('dash-techs')
-  const sc = {disponible:'#66BB6A',en_intervention:'#FFA726',hors_service:'#B0BEC5'}
-  const sl = {disponible:'Disponible',en_intervention:'En intervention',hors_service:'Hors service'}
-  dashTechs.innerHTML = allTechs.map(t=>`
+  document.getElementById('dash-techs').innerHTML=allTechs.map(t=>`
     <div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--gray2)">
       <div style="width:32px;height:32px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${t.prenom?.[0]}${t.nom?.[0]}</div>
       <div style="flex:1"><div style="font-size:13px;font-weight:600">${t.prenom} ${t.nom}</div><div style="font-size:11px;color:var(--text3)">${t.specialite||'—'}</div></div>
@@ -415,14 +516,14 @@ function renderDashboard() {
     </div>`).join('')
 }
 
-function renderBonsTable() {
-  const search = (document.getElementById('search-input')?.value||'').toLowerCase()
-  const filtered = allBons.filter(b=>{
-    const mf = currentFilter==='all'||(currentFilter==='urgence'&&b.priorite==='urgence')||b.statut===currentFilter
-    const ms = !search||b.titre.toLowerCase().includes(search)||(b.batiments?.nom||'').toLowerCase().includes(search)
+function renderBonsTable(){
+  const search=(document.getElementById('search-input')?.value||'').toLowerCase()
+  const filtered=allBons.filter(b=>{
+    const mf=currentFilter==='all'||(currentFilter==='urgence'&&b.priorite==='urgence')||b.statut===currentFilter
+    const ms=!search||b.titre.toLowerCase().includes(search)||(b.batiments?.nom||'').toLowerCase().includes(search)
     return mf&&ms
   })
-  document.getElementById('bons-tbody').innerHTML = filtered.map(b=>`
+  document.getElementById('bons-tbody').innerHTML=filtered.map(b=>`
     <tr onclick="openDetail('${b.id}')">
       <td style="font-weight:600;font-size:12px;color:var(--text3)">#${b.numero||'—'}</td>
       <td style="font-weight:600">${b.titre}</td>
@@ -430,44 +531,79 @@ function renderBonsTable() {
       <td>${b.techniciens?`${b.techniciens.prenom} ${b.techniciens.nom}`:'<span style="color:var(--text3)">—</span>'}</td>
       <td>${badge(b.priorite)}</td>
       <td>${badge(b.statut)}</td>
+      <td style="font-size:12px;color:var(--text2)">${b.duree_reelle?`<strong>${b.duree_reelle}h</strong>`:b.duree_estimee?`~${b.duree_estimee}h`:'—'}</td>
       <td style="font-size:12px;color:var(--text3)">${b.date_prevue?new Date(b.date_prevue).toLocaleDateString('fr-FR'):'—'}</td>
-    </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">Aucun bon</td></tr>'
+    </tr>`).join('')||'<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3)">Aucun bon</td></tr>'
 }
 
-function filterBons(f,el) {
+function filterBons(f,el){
   currentFilter=f
   document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'))
   el.classList.add('active')
   renderBonsTable()
 }
 
-async function openDetail(id) {
-  currentBonId = id
-  const b = allBons.find(x=>x.id===id)
+async function openDetail(id){
+  currentBonId=id
+  resetChrono()
+  const b=allBons.find(x=>x.id===id)
   if(!b) return
-  document.getElementById('d-titre').textContent = b.titre
-  document.getElementById('d-badges').innerHTML = badge(b.priorite==='urgence'?'urgence':b.statut)+' '+badge(b.priorite)
-  document.getElementById('d-desc').textContent = b.description||'Aucune description'
-  document.getElementById('d-infos').innerHTML = [
+
+  document.getElementById('d-titre').textContent=b.titre
+  document.getElementById('d-badges').innerHTML=badge(b.statut)+' '+badge(b.priorite)
+
+  // Statut boutons actifs
+  document.querySelectorAll('.statut-btn').forEach(btn=>btn.classList.remove('active'))
+  const sb2=document.getElementById('sb-'+b.statut)
+  if(sb2) sb2.classList.add('active')
+
+  // Si en cours, reprendre le chrono
+  if(b.statut==='en_cours'&&b.date_debut){
+    const elapsed=Math.floor((new Date()-new Date(b.date_debut))/1000)
+    chronoSeconds=elapsed
+    document.getElementById('chrono-display').textContent=formatChrono(chronoSeconds)
+    chronoStartTime=new Date(b.date_debut)
+  }
+  if(b.duree_reelle){
+    document.getElementById('chrono-display').textContent=formatChrono(Math.round(b.duree_reelle*3600))
+  }
+
+  document.getElementById('d-desc').textContent=b.description||'Aucune description'
+  document.getElementById('d-infos').innerHTML=[
     ['Bâtiment',b.batiments?.nom||'—'],['Zone',b.zone||'—'],
     ['Date prévue',b.date_prevue?new Date(b.date_prevue).toLocaleDateString('fr-FR'):'—'],
     ['Durée estimée',b.duree_estimee?b.duree_estimee+'h':'—'],
+    ['Durée réelle',b.duree_reelle?`<strong style="color:var(--green)">${b.duree_reelle}h</strong>`:'—'],
+    ['Démarré le',b.date_debut?new Date(b.date_debut).toLocaleString('fr-FR'):'—'],
   ].map(([k,v])=>`<div><div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;margin-bottom:2px">${k}</div><div style="font-size:13px">${v}</div></div>`).join('')
 
-  const tech = b.techniciens
-  document.getElementById('d-tech').innerHTML = tech?`
+  document.getElementById('d-side-infos').innerHTML=[
+    ['N° bon',`#${b.numero||'—'}`],
+    ['Catégorie',b.categorie||'—'],
+    ['Priorité',badge(b.priorite)],
+    ['Créé le',new Date(b.created_at).toLocaleDateString('fr-FR')],
+  ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--gray2)"><span style="font-size:12px;color:var(--text3)">${k}</span><span style="font-size:12px;font-weight:600">${v}</span></div>`).join('')
+
+  const tech=b.techniciens
+  document.getElementById('d-tech').innerHTML=tech?`
     <div style="display:flex;align-items:center;gap:10px">
       <div style="width:38px;height:38px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">${tech.prenom?.[0]}${tech.nom?.[0]}</div>
       <div><div style="font-size:14px;font-weight:600">${tech.prenom} ${tech.nom}</div>${tech.telephone?`<a href="tel:${tech.telephone}" style="font-size:12px;color:var(--blue)">📞 ${tech.telephone}</a>`:''}</div>
     </div>`:'<div style="font-size:13px;color:var(--text3)">Aucun technicien assigné</div>'
 
-  document.getElementById('d-tech-select').value = b.technicien_id||''
+  document.getElementById('d-tech-select').value=b.technicien_id||''
 
-  const {data:photos} = await sb.from('photos').select('*').eq('bon_id',id).order('created_at')
-  document.getElementById('d-photos').innerHTML = (photos||[]).map(p=>`<a href="${p.url}" target="_blank"><img src="${p.url}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;border:1px solid var(--border)"></a>`).join('')
+  // Photos
+  const {data:photos}=await sb.from('photos').select('*').eq('bon_id',id).order('created_at')
+  document.getElementById('d-photos').innerHTML=(photos||[]).map(p=>`
+    <div class="photo-item">
+      <a href="${p.url}" target="_blank"><img src="${p.url}" alt="photo"></a>
+      <button class="photo-delete" onclick="deletePhoto('${p.id}','${p.url}',event)">✕</button>
+    </div>`).join('')
 
-  const {data:comments} = await sb.from('commentaires').select('*').eq('bon_id',id).order('created_at')
-  document.getElementById('d-comments').innerHTML = (comments||[]).map(c=>`
+  // Commentaires
+  const {data:comments}=await sb.from('commentaires').select('*').eq('bon_id',id).order('created_at')
+  document.getElementById('d-comments').innerHTML=(comments||[]).map(c=>`
     <div style="display:flex;gap:10px;margin-bottom:12px">
       <div style="width:28px;height:28px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${c.auteur.slice(0,2).toUpperCase()}</div>
       <div><span style="font-size:13px;font-weight:600">${c.auteur}</span> <span style="font-size:11px;color:var(--text3)">${new Date(c.created_at).toLocaleString('fr-FR')}</span><div style="font-size:13px;color:var(--text2);margin-top:2px">${c.contenu}</div></div>
@@ -476,26 +612,31 @@ async function openDetail(id) {
   openModal('detail')
 }
 
-async function changeStatut(statut) {
+async function changeStatut(statut){
   if(!currentBonId) return
-  const extra = statut==='en_cours'?{date_debut:new Date().toISOString()}:statut==='termine'?{date_fin:new Date().toISOString()}:{}
+  const extra=statut==='en_cours'?{date_debut:new Date().toISOString()}:statut==='termine'?{date_fin:new Date().toISOString()}:{}
   await sb.from('bons_travail').update({statut,...extra}).eq('id',currentBonId)
-  await loadBons()
-  renderDashboard(); renderBonsTable()
-  showToast('Statut mis à jour !')
-  closeModal('detail')
+  document.querySelectorAll('.statut-btn').forEach(b=>b.classList.remove('active'))
+  const sb2=document.getElementById('sb-'+statut)
+  if(sb2) sb2.classList.add('active')
+  document.getElementById('d-badges').innerHTML=badge(statut)+' '+badge((allBons.find(b=>b.id===currentBonId)||{}).priorite||'normale')
+  await loadBons(); renderDashboard(); renderBonsTable()
+  showToast('Statut mis à jour : '+STATUT_LABEL[statut])
+  if(statut==='en_cours') chronoStart()
+  if(statut==='en_attente') chronoPause()
+  if(statut==='termine') chronoStop()
 }
 
-async function changeTech(technicien_id) {
+async function changeTech(technicien_id){
   if(!currentBonId) return
   await sb.from('bons_travail').update({technicien_id:technicien_id||null}).eq('id',currentBonId)
-  await loadBons()
+  await loadBons(); renderDashboard()
   showToast('Technicien mis à jour !')
 }
 
-async function addComment() {
-  const auteur = document.getElementById('c-auteur').value.trim()
-  const contenu = document.getElementById('c-text').value.trim()
+async function addComment(){
+  const auteur=document.getElementById('c-auteur').value.trim()
+  const contenu=document.getElementById('c-text').value.trim()
   if(!auteur||!contenu||!currentBonId) return
   await sb.from('commentaires').insert([{bon_id:currentBonId,auteur,contenu}])
   document.getElementById('c-text').value=''
@@ -503,65 +644,65 @@ async function addComment() {
   showToast('Commentaire ajouté !')
 }
 
-async function uploadPhoto(e) {
-  const file = e.target.files[0]
+async function uploadPhoto(e){
+  const file=e.target.files[0]
   if(!file||!currentBonId) return
-  const ext = file.name.split('.').pop()
-  const path = `${currentBonId}/${Date.now()}.${ext}`
-  const {error} = await sb.storage.from('photos').upload(path,file)
-  if(!error) {
-    const {data:{publicUrl}} = sb.storage.from('photos').getPublicUrl(path)
+  showToast('Upload en cours…')
+  const ext=file.name.split('.').pop()
+  const path=`${currentBonId}/${Date.now()}.${ext}`
+  const {error}=await sb.storage.from('photos').upload(path,file)
+  if(!error){
+    const {data:{publicUrl}}=sb.storage.from('photos').getPublicUrl(path)
     await sb.from('photos').insert([{bon_id:currentBonId,url:publicUrl}])
     await openDetail(currentBonId)
-    showToast('Photo ajoutée !')
-  } else showToast('Erreur upload','error')
+    showToast('📷 Photo ajoutée !')
+  } else showToast('Erreur upload: vérifiez le bucket Supabase','error')
 }
 
-async function createBon() {
-  const titre = document.getElementById('f-titre').value.trim()
+async function deletePhoto(photoId,url,e){
+  e.preventDefault(); e.stopPropagation()
+  if(!confirm('Supprimer cette photo ?')) return
+  await sb.from('photos').delete().eq('id',photoId)
+  await openDetail(currentBonId)
+  showToast('Photo supprimée')
+}
+
+async function createBon(){
+  const titre=document.getElementById('f-titre').value.trim()
   if(!titre) return
-  const payload = {
-    titre, categorie:document.getElementById('f-cat').value,
-    priorite:document.getElementById('f-prio').value, statut:'planifie',
-    batiment_id:document.getElementById('f-bat').value||null,
-    technicien_id:document.getElementById('f-tech').value||null,
-    zone:document.getElementById('f-zone').value||null,
-    date_prevue:document.getElementById('f-date').value||null,
-    description:document.getElementById('f-desc').value||null
-  }
-  const {error} = await sb.from('bons_travail').insert([payload])
+  const payload={titre,categorie:document.getElementById('f-cat').value,priorite:document.getElementById('f-prio').value,statut:'planifie',batiment_id:document.getElementById('f-bat').value||null,technicien_id:document.getElementById('f-tech').value||null,zone:document.getElementById('f-zone').value||null,date_prevue:document.getElementById('f-date').value||null,description:document.getElementById('f-desc').value||null}
+  const {error}=await sb.from('bons_travail').insert([payload])
   if(!error){
-    showToast('Bon créé avec succès !')
+    showToast('✅ Bon créé avec succès !')
     closeModal('create')
-    document.getElementById('f-titre').value=''
-    document.getElementById('f-desc').value=''
+    document.getElementById('f-titre').value=''; document.getElementById('f-desc').value=''
     await loadBons(); renderDashboard(); renderBonsTable()
   } else showToast('Erreur: '+error.message,'error')
 }
 
-async function saveTech() {
+async function saveTech(){
   const prenom=document.getElementById('t-prenom').value.trim()
   const nom=document.getElementById('t-nom').value.trim()
   const email=document.getElementById('t-email').value.trim()
   if(!prenom||!nom||!email) return
-  const {error} = await sb.from('techniciens').insert([{prenom,nom,email,telephone:document.getElementById('t-tel').value||null,specialite:document.getElementById('t-spec').value,statut:'disponible'}])
+  const {error}=await sb.from('techniciens').insert([{prenom,nom,email,telephone:document.getElementById('t-tel').value||null,specialite:document.getElementById('t-spec').value,statut:'disponible'}])
   if(!error){showToast('Technicien ajouté !');closeModal('addTech');await loadTechs();renderTechs()}
   else showToast(error.message,'error')
 }
 
-async function saveBat() {
+async function saveBat(){
   const nom=document.getElementById('b-nom').value.trim()
   const adresse=document.getElementById('b-adresse').value.trim()
   const ville=document.getElementById('b-ville').value.trim()
   if(!nom||!adresse||!ville) return
-  const {error} = await sb.from('batiments').insert([{nom,adresse,ville,nb_logements:parseInt(document.getElementById('b-logements').value)||0}])
+  const {error}=await sb.from('batiments').insert([{nom,adresse,ville,nb_logements:parseInt(document.getElementById('b-logements').value)||0}])
   if(!error){showToast('Bâtiment ajouté !');closeModal('addBat');await loadBats();renderBatiments()}
   else showToast(error.message,'error')
 }
 
-function renderTechs() {
+function renderTechs(){
   const sc={disponible:{label:'Disponible',color:'#66BB6A',bg:'#E8F5E9'},en_intervention:{label:'En intervention',color:'#FFA726',bg:'#FFF3E0'},hors_service:{label:'Hors service',color:'#B0BEC5',bg:'#ECEFF1'}}
-  document.getElementById('techs-grid').innerHTML = allTechs.map(t=>{
+  document.getElementById('techs-grid').innerHTML=allTechs.map(t=>{
     const s=sc[t.statut]||sc.disponible
     return `<div class="card" style="padding:18px 20px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
@@ -579,17 +720,17 @@ function renderTechs() {
     </div>`}).join('')
 }
 
-async function updateTechStatut(id,statut) {
+async function updateTechStatut(id,statut){
   await sb.from('techniciens').update({statut}).eq('id',id)
   await loadTechs(); renderTechs(); renderDashboard()
   showToast('Statut mis à jour !')
 }
 
-function renderBatiments() {
-  document.getElementById('bats-grid').innerHTML = allBats.map(b=>{
-    const bons = allBons.filter(x=>x.batiment_id===b.id)
-    const enc = bons.filter(x=>x.statut==='en_cours').length
-    const urg = bons.filter(x=>x.priorite==='urgence'&&x.statut!=='termine').length
+function renderBatiments(){
+  document.getElementById('bats-grid').innerHTML=allBats.map(b=>{
+    const bons=allBons.filter(x=>x.batiment_id===b.id)
+    const enc=bons.filter(x=>x.statut==='en_cours').length
+    const urg=bons.filter(x=>x.priorite==='urgence'&&x.statut!=='termine').length
     return `<div class="card" style="padding:0;overflow:hidden">
       <div style="background:var(--blue-light);height:70px;display:flex;align-items:center;justify-content:center;font-size:36px">🏢</div>
       <div style="padding:16px 18px">
@@ -604,23 +745,23 @@ function renderBatiments() {
     </div>`}).join('')
 }
 
-function renderStats() {
-  document.getElementById('s-total').textContent = allBons.length
-  document.getElementById('s-term').textContent = allBons.filter(b=>b.statut==='termine').length
-  document.getElementById('s-enc').textContent = allBons.filter(b=>b.statut==='en_cours').length
-  document.getElementById('s-urg').textContent = allBons.filter(b=>b.priorite==='urgence').length
-  const cats = ['Plomberie','Électricité','Serrurerie','Peinture','Chauffage/VMC','Espaces communs','Autre']
-  const colors = ['#1565C0','#1976D2','#42A5F5','#0D47A1','#90CAF9','#1E88E5','#64B5F6']
-  const byCat = cats.map((c,i)=>({name:c,n:allBons.filter(b=>b.categorie===c).length,color:colors[i]})).filter(c=>c.n>0).sort((a,b)=>b.n-a.n)
-  const maxCat = Math.max(...byCat.map(c=>c.n),1)
-  document.getElementById('stats-cats').innerHTML = byCat.map(c=>`
+function renderStats(){
+  document.getElementById('s-total').textContent=allBons.length
+  document.getElementById('s-term').textContent=allBons.filter(b=>b.statut==='termine').length
+  document.getElementById('s-enc').textContent=allBons.filter(b=>b.statut==='en_cours').length
+  document.getElementById('s-urg').textContent=allBons.filter(b=>b.priorite==='urgence').length
+  const cats=['Plomberie','Électricité','Serrurerie','Peinture','Chauffage/VMC','Espaces communs','Autre']
+  const colors=['#1565C0','#1976D2','#42A5F5','#0D47A1','#90CAF9','#1E88E5','#64B5F6']
+  const byCat=cats.map((c,i)=>({name:c,n:allBons.filter(b=>b.categorie===c).length,color:colors[i]})).filter(c=>c.n>0).sort((a,b)=>b.n-a.n)
+  const maxCat=Math.max(...byCat.map(c=>c.n),1)
+  document.getElementById('stats-cats').innerHTML=byCat.map(c=>`
     <div style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${c.name}</span><span style="font-weight:600">${c.n}</span></div>
       <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(c.n/maxCat*100)}%;background:${c.color}"></div></div>
     </div>`).join('')||'<div style="color:var(--text3);font-size:13px">Aucune donnée</div>'
-  const maxT = Math.max(...allTechs.map(t=>allBons.filter(b=>b.technicien_id===t.id).length),1)
-  document.getElementById('stats-techs').innerHTML = allTechs.map((t,i)=>{
-    const n = allBons.filter(b=>b.technicien_id===t.id).length
+  const maxT=Math.max(...allTechs.map(t=>allBons.filter(b=>b.technicien_id===t.id).length),1)
+  document.getElementById('stats-techs').innerHTML=allTechs.map((t,i)=>{
+    const n=allBons.filter(b=>b.technicien_id===t.id).length
     return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
       <div style="width:30px;height:30px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${t.prenom?.[0]}${t.nom?.[0]}</div>
       <div style="flex:1"><div style="font-size:12px;font-weight:600;margin-bottom:4px">${t.prenom} ${t.nom}</div><div class="progress-bar"><div class="progress-fill" style="width:${Math.round(n/maxT*100)}%;background:${colors[i%colors.length]}"></div></div></div>
@@ -628,34 +769,34 @@ function renderStats() {
     </div>`}).join('')||'<div style="color:var(--text3);font-size:13px">Aucune donnée</div>'
 }
 
-function renderCalendar() {
-  const y=calDate.getFullYear(), m=calDate.getMonth()
-  document.getElementById('cal-title').textContent = MOIS[m]+' '+y
-  const first = new Date(y,m,1).getDay()
-  const offset = first===0?6:first-1
-  const days = new Date(y,m+1,0).getDate()
-  const today = new Date()
-  const byDay = {}
+function renderCalendar(){
+  const y=calDate.getFullYear(),m=calDate.getMonth()
+  document.getElementById('cal-title').textContent=MOIS[m]+' '+y
+  const first=new Date(y,m,1).getDay()
+  const offset=first===0?6:first-1
+  const days=new Date(y,m+1,0).getDate()
+  const today=new Date()
+  const byDay={}
   allBons.forEach(b=>{
     if(!b.date_prevue) return
     const d=new Date(b.date_prevue)
     if(d.getFullYear()===y&&d.getMonth()===m){if(!byDay[d.getDate()])byDay[d.getDate()]=[];byDay[d.getDate()].push(b)}
   })
-  const ec={planifie:{bg:'var(--blue-light)',c:'var(--blue)'},en_cours:{bg:'var(--orange-light)',c:'var(--orange)'},termine:{bg:'var(--green-light)',c:'var(--green)'},urgence:{bg:'var(--red-light)',c:'var(--red)'}}
-  let html = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">${JOURS.map(j=>`<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px 0">${j}</div>`).join('')}</div>`
-  html += `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">`
+  const ec={planifie:{bg:'var(--blue-light)',c:'var(--blue)'},en_cours:{bg:'var(--orange-light)',c:'var(--orange)'},en_attente:{bg:'var(--yellow-light)',c:'var(--yellow)'},termine:{bg:'var(--green-light)',c:'var(--green)'},urgence:{bg:'var(--red-light)',c:'var(--red)'}}
+  let html=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">${JOURS.map(j=>`<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px 0">${j}</div>`).join('')}</div>`
+  html+=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">`
   for(let i=0;i<offset;i++) html+=`<div style="min-height:72px;background:var(--gray2);border-radius:6px;opacity:.4"></div>`
   for(let d=1;d<=days;d++){
     const isToday=d===today.getDate()&&m===today.getMonth()&&y===today.getFullYear()
     const evs=byDay[d]||[]
     html+=`<div style="min-height:72px;background:${isToday?'var(--blue-light)':'var(--gray)'};border-radius:6px;padding:4px;border:${isToday?'1.5px solid var(--blue)':'1px solid var(--border)'}">
       <div style="font-size:11px;font-weight:${isToday?700:600};color:${isToday?'var(--blue)':'var(--text2)'};margin-bottom:2px">${d}</div>
-      ${evs.slice(0,2).map(b=>{const c=ec[b.priorite==='urgence'?'urgence':b.statut]||ec.planifie;return `<div onclick="openDetail('${b.id}')" style="font-size:10px;background:${c.bg};color:${c.c};border-radius:3px;padding:1px 4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">${b.titre}</div>`}).join('')}
+      ${evs.slice(0,2).map(b=>{const c=ec[b.priorite==='urgence'?'urgence':b.statut]||ec.planifie;return`<div onclick="openDetail('${b.id}')" style="font-size:10px;background:${c.bg};color:${c.c};border-radius:3px;padding:1px 4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">${b.titre}</div>`}).join('')}
       ${evs.length>2?`<div style="font-size:10px;color:var(--text3)">+${evs.length-2}</div>`:''}
     </div>`
   }
   html+=`</div>`
-  document.getElementById('cal-grid').innerHTML = html
+  document.getElementById('cal-grid').innerHTML=html
 }
 
 function calNav(dir){calDate=new Date(calDate.getFullYear(),calDate.getMonth()+dir,1);renderCalendar()}
@@ -676,18 +817,12 @@ function showPage(name,el){
 }
 
 function openModal(id){document.getElementById('modal-'+id).style.display='flex'}
-function closeModal(id){document.getElementById('modal-'+id).style.display='none'}
+function closeModal(id){document.getElementById('modal-'+id).style.display='none';if(id==='detail')resetChrono()}
 function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('show')}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
+function showToast(msg,type='success'){const t=document.createElement('div');t.className='toast'+(type==='error'?' error':'');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}
 
-function showToast(msg,type='success'){
-  const t=document.createElement('div');t.className='toast'+(type==='error'?' error':'');t.textContent=msg;document.body.appendChild(t)
-  setTimeout(()=>t.remove(),3000)
-}
-
-// PWA
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
-
 init()
 </script>
 </body>
