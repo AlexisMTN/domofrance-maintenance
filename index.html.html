@@ -210,9 +210,77 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
   .stats-grid{grid-template-columns:repeat(4,1fr)}
   .content{padding:32px}
 }
+
+/* ── PAGE DE CONNEXION ── */
+.login-page{display:none;position:fixed;inset:0;background:linear-gradient(135deg,#1565C0 0%,#0D47A1 100%);z-index:999;align-items:center;justify-content:center;padding:20px}
+.login-page.show{display:flex}
+.login-box{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo-icon{font-size:48px;margin-bottom:8px}
+.login-logo-title{font-size:22px;font-weight:700;color:var(--text)}
+.login-logo-sub{font-size:13px;color:var(--text3);margin-top:4px}
+.login-error{background:var(--red-light);color:var(--red);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
+.login-btn{width:100%;padding:13px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s;margin-top:6px}
+.login-btn:hover{background:#1976D2}
+.login-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-divider{text-align:center;color:var(--text3);font-size:12px;margin:16px 0;position:relative}
+.login-divider::before,.login-divider::after{content:'';position:absolute;top:50%;width:40%;height:1px;background:var(--border)}
+.login-divider::before{left:0}.login-divider::after{right:0}
+.register-link{text-align:center;font-size:13px;color:var(--text2);margin-top:16px}
+.register-link span{color:var(--blue);cursor:pointer;font-weight:600}
+
+/* Topbar user */
+.topbar-user{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 10px;border-radius:8px;border:1px solid var(--border)}
+.topbar-user:hover{background:var(--gray)}
+.topbar-user-name{font-size:12px;font-weight:600;color:var(--text)}
+.topbar-user-email{font-size:10px;color:var(--text3)}
 </style>
 </head>
 <body>
+
+<!-- PAGE DE CONNEXION -->
+<div class="login-page show" id="login-page">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">🏢</div>
+      <div class="login-logo-title">DOMOFRANCE</div>
+      <div class="login-logo-sub">Gestion de Maintenance</div>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <div id="login-form">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="login-email" placeholder="votre@email.fr" style="font-size:15px;padding:11px 14px">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        <div style="position:relative">
+          <input type="password" class="form-input" id="login-password" placeholder="••••••••" style="font-size:15px;padding:11px 14px;padding-right:40px" onkeydown="if(event.key==='Enter')doLogin()">
+          <button onclick="togglePwd()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px" id="pwd-eye">👁️</button>
+        </div>
+      </div>
+      <button class="login-btn" onclick="doLogin()" id="login-btn">Se connecter</button>
+      <div class="login-divider">ou</div>
+      <div class="register-link">Pas encore de compte ? <span onclick="showRegister()">Créer un compte</span></div>
+    </div>
+    <div id="register-form" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Prénom & Nom</label>
+        <input class="form-input" id="reg-name" placeholder="Pierre Dubois" style="font-size:15px;padding:11px 14px">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="reg-email" placeholder="votre@email.fr" style="font-size:15px;padding:11px 14px">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        <input type="password" class="form-input" id="reg-password" placeholder="Minimum 6 caractères" style="font-size:15px;padding:11px 14px">
+      </div>
+      <button class="login-btn" onclick="doRegister()" id="reg-btn">Créer mon compte</button>
+      <div class="register-link" style="margin-top:12px">Déjà un compte ? <span onclick="showLogin()">Se connecter</span></div>
+    </div>
+  </div>
+</div>
 <div class="app">
   <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
   <aside class="sidebar" id="sidebar">
@@ -246,6 +314,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
       <button class="menu-btn" onclick="openSidebar()">☰</button>
       <div class="page-title" id="page-title">Tableau de bord</div>
       <button class="btn btn-primary" onclick="openModal('create')">+ Nouveau bon</button>
+      <div class="topbar-user" onclick="doLogout()" title="Se déconnecter">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700" id="topbar-avatar">?</div>
+        <div style="display:flex;flex-direction:column">
+          <div class="topbar-user-name" id="topbar-name">—</div>
+          <div class="topbar-user-email">Déconnexion</div>
+        </div>
+      </div>
     </header>
     <div class="content">
 
@@ -491,6 +566,69 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 const SUPABASE_URL = 'https://eomijzmsevgyyeroqdbo.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_4N6hRNVA5ibzbKAi30_Txg_VIYS4okb'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ── AUTH ──
+function showLoginPage(){document.getElementById('login-page').classList.add('show')}
+function hideLoginPage(){document.getElementById('login-page').classList.remove('show')}
+function showRegister(){document.getElementById('login-form').style.display='none';document.getElementById('register-form').style.display='block';document.getElementById('login-error').style.display='none'}
+function showLogin(){document.getElementById('register-form').style.display='none';document.getElementById('login-form').style.display='block';document.getElementById('login-error').style.display='none'}
+function togglePwd(){const i=document.getElementById('login-password');i.type=i.type==='password'?'text':'password'}
+
+function showLoginError(msg){const e=document.getElementById('login-error');e.textContent=msg;e.style.display='block'}
+
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim()
+  const password=document.getElementById('login-password').value
+  if(!email||!password){showLoginError('Veuillez remplir tous les champs');return}
+  const btn=document.getElementById('login-btn')
+  btn.textContent='Connexion…';btn.disabled=true
+  const {data,error}=await sb.auth.signInWithPassword({email,password})
+  btn.textContent='Se connecter';btn.disabled=false
+  if(error){showLoginError('Email ou mot de passe incorrect');return}
+  onLogin(data.user)
+}
+
+async function doRegister(){
+  const name=document.getElementById('reg-name').value.trim()
+  const email=document.getElementById('reg-email').value.trim()
+  const password=document.getElementById('reg-password').value
+  if(!name||!email||!password){showLoginError('Veuillez remplir tous les champs');return}
+  if(password.length<6){showLoginError('Le mot de passe doit faire au moins 6 caractères');return}
+  const btn=document.getElementById('reg-btn')
+  btn.textContent='Création…';btn.disabled=true
+  const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name}}})
+  btn.textContent='Créer mon compte';btn.disabled=false
+  if(error){showLoginError(error.message);return}
+  showLoginError('✅ Compte créé ! Vérifiez votre email pour confirmer.')
+  document.getElementById('login-error').style.background='var(--green-light)'
+  document.getElementById('login-error').style.color='var(--green)'
+  setTimeout(showLogin,2000)
+}
+
+async function doLogout(){
+  if(!confirm('Se déconnecter ?')) return
+  await sb.auth.signOut()
+  showLoginPage()
+}
+
+function onLogin(user){
+  hideLoginPage()
+  const name=user.user_metadata?.full_name||user.email.split('@')[0]
+  const initials=name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
+  document.getElementById('topbar-avatar').textContent=initials
+  document.getElementById('topbar-name').textContent=name
+  init()
+}
+
+// Vérifier session au chargement
+sb.auth.getSession().then(({data:{session}})=>{
+  if(session) onLogin(session.user)
+  else showLoginPage()
+})
+
+sb.auth.onAuthStateChange((event,session)=>{
+  if(event==='SIGNED_OUT') showLoginPage()
+})
 
 let allBons=[], allTechs=[], allBats=[], bonPhotos={}
 let currentFilter='all', currentBonId=null, createPhotoFiles=[]
@@ -976,7 +1114,6 @@ function closeSidebar(){document.getElementById('sidebar').classList.remove('ope
 function showToast(msg,type='success'){const t=document.createElement('div');t.className='toast'+(type==='error'?' error':'');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
-init()
 </script>
 
 <!-- NAVIGATION MOBILE EN BAS -->
