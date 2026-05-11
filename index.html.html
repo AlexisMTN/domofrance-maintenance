@@ -173,6 +173,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
       <div class="nav-item" onclick="showPage('techniciens',this)">👷 Techniciens</div>
       <div class="nav-item" onclick="showPage('batiments',this)">🏢 Bâtiments</div>
       <div class="nav-item" onclick="showPage('stats',this)">📈 Statistiques</div>
+      <div class="nav-item" onclick="showPage('historique',this)">🗂️ Historique</div>
     </nav>
     <div class="sidebar-footer">
       <div class="user-row">
@@ -225,14 +226,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 
       <!-- BONS -->
       <div class="page" id="page-bons">
-        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
           <button class="filter-tab active" onclick="filterBons('all',this)">Tous</button>
           <button class="filter-tab" onclick="filterBons('urgence',this)">🔴 Urgence</button>
           <button class="filter-tab" onclick="filterBons('en_cours',this)">⚙️ En cours</button>
           <button class="filter-tab" onclick="filterBons('en_attente',this)">⏸️ En attente</button>
           <button class="filter-tab" onclick="filterBons('planifie',this)">📅 Planifié</button>
           <button class="filter-tab" onclick="filterBons('termine',this)">✅ Terminé</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+          <select id="filter-bat" class="form-select" style="width:200px" onchange="renderBonsTable()">
+            <option value="">🏢 Tous les bâtiments</option>
+          </select>
           <input id="search-input" class="form-input" placeholder="Rechercher…" style="margin-left:auto;width:200px" oninput="renderBonsTable()">
+          <button class="btn btn-secondary" style="padding:7px 14px;font-size:13px" onclick="exportExcel()">📊 Export Excel</button>
         </div>
         <div class="card"><div style="overflow-x:auto">
           <table class="table">
@@ -285,6 +292,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           <div class="card" style="padding:18px 20px"><div style="font-weight:700;font-size:14px;margin-bottom:18px">Par catégorie</div><div id="stats-cats"></div></div>
           <div class="card" style="padding:18px 20px"><div style="font-weight:700;font-size:14px;margin-bottom:18px">Par technicien</div><div id="stats-techs"></div></div>
         </div>
+      </div>
+
+      <!-- HISTORIQUE -->
+      <div class="page" id="page-historique">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div style="font-size:14px;color:var(--text2)">Bons clôturés — conservés 15 jours puis supprimés automatiquement</div>
+        </div>
+        <div id="historique-list"></div>
       </div>
 
     </div>
@@ -458,6 +473,55 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('terminer')">Annuler</button>
       <button class="btn btn-success" id="btn-terminer" onclick="confirmerTerminer()">✅ Clôturer le bon</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SIGNATURE -->
+<div class="modal-overlay" id="modal-signature" style="display:none" onclick="if(event.target===this)closeModal('signature')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><div class="modal-title">✍️ Signature</div><button class="modal-close" onclick="closeModal('signature')">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Signez dans le cadre ci-dessous pour valider la clôture :</div>
+      <canvas id="signature-canvas" width="380" height="180" style="border:2px solid var(--border);border-radius:8px;background:#fff;cursor:crosshair;touch-action:none;width:100%"></canvas>
+      <button class="btn btn-secondary" style="margin-top:8px;font-size:12px;padding:6px 12px" onclick="clearSignature()">🗑️ Effacer</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('signature');closeModal('terminer')">Annuler</button>
+      <button class="btn btn-success" onclick="validerSignature()">✅ Valider et clôturer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RECURRENCE -->
+<div class="modal-overlay" id="modal-recurrence" style="display:none" onclick="if(event.target===this)closeModal('recurrence')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head"><div class="modal-title">🔄 Maintenance récurrente</div><button class="modal-close" onclick="closeModal('recurrence')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Titre *</label><input class="form-input" id="rec-titre" placeholder="Ex: Vérification extincteurs"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Bâtiment</label><select class="form-select" id="rec-bat"><option value="">— Tous —</option></select></div>
+        <div class="form-group"><label class="form-label">Technicien</label><select class="form-select" id="rec-tech"><option value="">— Non assigné —</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Fréquence</label>
+          <select class="form-select" id="rec-freq">
+            <option value="7">Chaque semaine</option>
+            <option value="14">Toutes les 2 semaines</option>
+            <option value="30">Chaque mois</option>
+            <option value="90">Tous les 3 mois</option>
+            <option value="180">Tous les 6 mois</option>
+            <option value="365">Chaque année</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Prochaine date</label><input type="date" class="form-input" id="rec-date"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Catégorie</label><select class="form-select" id="rec-cat"><option>Plomberie</option><option>Électricité</option><option>Serrurerie</option><option>Peinture</option><option>Chauffage/VMC</option><option>Espaces communs</option><option>Autre</option></select></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="rec-desc" placeholder="Décrivez la tâche récurrente…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('recurrence')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveRecurrence()">✓ Créer la récurrence</button>
     </div>
   </div>
 </div>
@@ -1434,6 +1498,362 @@ function showToast(msg,type='success'){const t=document.createElement('div');t.c
 function setMobileNav(el){document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'));el.classList.add('active')}
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
+
+// ── FILTRE PAR BATIMENT ──
+function populateFilterBat(){
+  const sel=document.getElementById('filter-bat')
+  if(!sel) return
+  const current=sel.value
+  sel.innerHTML='<option value="">🏢 Tous les bâtiments</option>'+allBats.map(b=>'<option value="'+b.id+'">'+b.nom+'</option>').join('')
+  sel.value=current
+}
+
+// Mettre à jour populateBatSelect pour aussi remplir le filtre
+const origPopulateBatSelect=populateBatSelect
+// Override renderBonsTable pour inclure filtre bâtiment
+const origRenderBonsTable=renderBonsTable
+function renderBonsTable(){
+  const search=(document.getElementById('search-input')?.value||'').toLowerCase()
+  const batFilter=document.getElementById('filter-bat')?.value||''
+  const filtered=allBons.filter(b=>{
+    const mf=currentFilter==='all'||(currentFilter==='urgence'&&b.priorite==='urgence')||b.statut===currentFilter
+    const ms=!search||b.titre.toLowerCase().includes(search)||(b.batiments?.nom||'').toLowerCase().includes(search)
+    const mb=!batFilter||b.batiment_id===batFilter
+    return mf&&ms&&mb
+  })
+  // Indicateur bons à supprimer bientôt
+  const bientot=allBons.filter(b=>{
+    if(!b.suppression_prevue) return false
+    const diff=(new Date(b.suppression_prevue)-new Date())/(1000*60*60*24)
+    return diff>=0&&diff<=3
+  })
+  const alertBanner=document.getElementById('bientot-banner')
+  if(bientot.length>0){
+    if(!alertBanner){
+      const div=document.createElement('div')
+      div.id='bientot-banner'
+      div.style.cssText='background:var(--red-light);color:var(--red);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:12px;font-weight:500'
+      div.textContent='⚠️ '+bientot.length+' bon(s) seront supprimés dans moins de 3 jours : '+bientot.map(b=>'#'+b.numero+' '+b.titre).join(', ')
+      document.getElementById('page-bons').insertBefore(div,document.getElementById('page-bons').firstChild)
+    }
+  } else if(alertBanner) alertBanner.remove()
+
+  document.getElementById('bons-tbody').innerHTML=filtered.map(b=>{
+    const firstPhoto=bonPhotos[b.id]
+    const photoCell=firstPhoto?'<td><img src="'+firstPhoto+'" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--border)"></td>'
+      :'<td><div style="width:40px;height:40px;border-radius:6px;background:var(--gray2);display:flex;align-items:center;justify-content:center;font-size:16px">📷</div></td>'
+    const tech=b.techniciens?b.techniciens.prenom+' '+b.techniciens.nom:'<span style="color:var(--text3)">—</span>'
+    const zone=b.zone?'<br><span style="font-size:11px;color:var(--text3)">'+b.zone+'</span>':''
+    const duree=b.duree_reelle?'<strong>'+b.duree_reelle+'h</strong>':b.duree_estimee?'~'+b.duree_estimee+'h':'—'
+    const date=b.date_prevue?new Date(b.date_prevue).toLocaleDateString('fr-FR'):'—'
+    // Indicateur suppression proche
+    let supIcon=''
+    if(b.suppression_prevue){
+      const diff=Math.ceil((new Date(b.suppression_prevue)-new Date())/(1000*60*60*24))
+      if(diff<=3&&diff>=0) supIcon='<span title="Suppression dans '+diff+'j" style="font-size:10px;background:var(--red-light);color:var(--red);border-radius:4px;padding:1px 4px;margin-left:4px">🗑️ '+diff+'j</span>'
+    }
+    return '<tr onclick="openDetail(\''+b.id+'\')">'
+      +'<td style="font-weight:600;font-size:12px;color:var(--text3)">#'+(b.numero||'—')+'</td>'
+      +photoCell
+      +'<td style="font-weight:600">'+b.titre+supIcon+'</td>'
+      +'<td>'+(b.batiments?.nom||'—')+zone+'</td>'
+      +'<td>'+tech+'</td>'
+      +'<td>'+badge(b.priorite)+'</td>'
+      +'<td>'+badge(b.statut)+'</td>'
+      +'<td style="font-size:12px;color:var(--text2)">'+duree+'</td>'
+      +'<td style="font-size:12px;color:var(--text3)">'+date+'</td>'
+      +'</tr>'
+  }).join('')||'<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3)">Aucun bon</td></tr>'
+}
+
+// ── EXPORT EXCEL ──
+function exportExcel(){
+  if(!window.XLSX){
+    const s=document.createElement('script')
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+    s.onload=()=>doExport()
+    document.head.appendChild(s)
+  } else doExport()
+}
+
+function doExport(){
+  const batFilter=document.getElementById('filter-bat')?.value||''
+  const search=(document.getElementById('search-input')?.value||'').toLowerCase()
+  const filtered=allBons.filter(b=>{
+    const mf=currentFilter==='all'||(currentFilter==='urgence'&&b.priorite==='urgence')||b.statut===currentFilter
+    const ms=!search||b.titre.toLowerCase().includes(search)||(b.batiments?.nom||'').toLowerCase().includes(search)
+    const mb=!batFilter||b.batiment_id===batFilter
+    return mf&&ms&&mb
+  })
+  const rows=filtered.map(b=>({
+    'N° Bon': '#'+(b.numero||'—'),
+    'Titre': b.titre,
+    'Bâtiment': b.batiments?.nom||'—',
+    'Zone': b.zone||'—',
+    'Catégorie': b.categorie||'—',
+    'Priorité': b.priorite||'—',
+    'Statut': STATUT_LABEL[b.statut]||b.statut,
+    'Technicien': b.techniciens?b.techniciens.prenom+' '+b.techniciens.nom:'—',
+    'Date prévue': b.date_prevue?new Date(b.date_prevue).toLocaleDateString('fr-FR'):'—',
+    'Durée estimée (h)': b.duree_estimee||'—',
+    'Durée réelle (h)': b.duree_reelle||'—',
+    'Démarré le': b.date_debut?new Date(b.date_debut).toLocaleString('fr-FR'):'—',
+    'Terminé le': b.date_fin?new Date(b.date_fin).toLocaleString('fr-FR'):'—',
+    'Créé le': new Date(b.created_at).toLocaleDateString('fr-FR'),
+  }))
+  const ws=XLSX.utils.json_to_sheet(rows)
+  const wb=XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb,'Bons de travail',ws)
+  ws['!cols']=[{wch:12},{wch:35},{wch:25},{wch:15},{wch:15},{wch:12},{wch:12},{wch:25},{wch:15},{wch:10},{wch:10},{wch:20},{wch:20},{wch:15}]
+  XLSX.writeFile(wb,'DOMOFRANCE_Bons_'+new Date().toISOString().slice(0,10)+'.xlsx')
+  showToast('📊 Export Excel téléchargé !')
+}
+
+// ── HISTORIQUE ──
+function renderHistorique(){
+  const termines=allBons.filter(b=>b.statut==='termine').sort((a,b)=>new Date(b.date_fin||b.updated_at)-new Date(a.date_fin||a.updated_at))
+  if(termines.length===0){
+    document.getElementById('historique-list').innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">Aucun bon clôturé pour le moment</div>'
+    return
+  }
+  document.getElementById('historique-list').innerHTML='<div class="card"><div style="overflow-x:auto"><table class="table"><thead><tr><th>N°</th><th>Titre</th><th>Bâtiment</th><th>Technicien</th><th>Durée</th><th>Clôturé le</th><th>Suppression</th></tr></thead><tbody>'
+    +termines.map(b=>{
+      const diff=b.suppression_prevue?Math.ceil((new Date(b.suppression_prevue)-new Date())/(1000*60*60*24)):null
+      const supColor=diff!==null&&diff<=3?'var(--red)':'var(--text3)'
+      const supText=diff!==null?(diff<=0?"Aujourd'hui":diff+'j restants'):'—'
+      return '<tr onclick="openDetail(\''+b.id+'\')">' 
+        +'<td style="font-weight:600;font-size:12px;color:var(--text3)">#'+(b.numero||'—')+'</td>'
+        +'<td style="font-weight:600">'+b.titre+'</td>'
+        +'<td>'+(b.batiments?.nom||'—')+'</td>'
+        +'<td>'+(b.techniciens?b.techniciens.prenom+' '+b.techniciens.nom:'—')+'</td>'
+        +'<td>'+(b.duree_reelle?b.duree_reelle+'h':'—')+'</td>'
+        +'<td style="font-size:12px;color:var(--text3)">'+(b.date_fin?new Date(b.date_fin).toLocaleString('fr-FR'):'—')+'</td>'
+        +'<td style="font-size:12px;color:'+supColor+';font-weight:600">🗑️ '+supText+'</td>'
+        +'</tr>'
+    }).join('')
+    +'</tbody></table></div></div>'
+}
+
+// ── SIGNATURE ──
+let signatureData=null
+let signatureDrawing=false
+let signatureLastX=0,signatureLastY=0
+
+function initSignatureCanvas(){
+  const canvas=document.getElementById('signature-canvas')
+  if(!canvas) return
+  const ctx=canvas.getContext('2d')
+  ctx.clearRect(0,0,canvas.width,canvas.height)
+  ctx.strokeStyle='#183960';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round'
+  signatureData=null
+
+  const getPos=(e)=>{
+    const rect=canvas.getBoundingClientRect()
+    const scaleX=canvas.width/rect.width
+    const scaleY=canvas.height/rect.height
+    if(e.touches){
+      return {x:(e.touches[0].clientX-rect.left)*scaleX,y:(e.touches[0].clientY-rect.top)*scaleY}
+    }
+    return {x:(e.clientX-rect.left)*scaleX,y:(e.clientY-rect.top)*scaleY}
+  }
+
+  const start=(e)=>{e.preventDefault();signatureDrawing=true;const p=getPos(e);signatureLastX=p.x;signatureLastY=p.y;ctx.beginPath();ctx.moveTo(p.x,p.y)}
+  const draw=(e)=>{e.preventDefault();if(!signatureDrawing) return;const p=getPos(e);ctx.lineTo(p.x,p.y);ctx.stroke();signatureLastX=p.x;signatureLastY=p.y}
+  const stop=(e)=>{signatureDrawing=false}
+
+  canvas.addEventListener('mousedown',start)
+  canvas.addEventListener('mousemove',draw)
+  canvas.addEventListener('mouseup',stop)
+  canvas.addEventListener('mouseleave',stop)
+  canvas.addEventListener('touchstart',start,{passive:false})
+  canvas.addEventListener('touchmove',draw,{passive:false})
+  canvas.addEventListener('touchend',stop)
+}
+
+function clearSignature(){
+  const canvas=document.getElementById('signature-canvas')
+  const ctx=canvas.getContext('2d')
+  ctx.clearRect(0,0,canvas.width,canvas.height)
+  signatureData=null
+}
+
+function validerSignature(){
+  const canvas=document.getElementById('signature-canvas')
+  signatureData=canvas.toDataURL('image/png')
+  closeModal('signature')
+  doConfirmerTerminer()
+}
+
+// Override ouvrirTerminer pour inclure signature
+function ouvrirTerminer(){
+  document.getElementById('terminer-auteur').value=''
+  document.getElementById('terminer-comment').value=''
+  document.getElementById('terminer-photo-preview').innerHTML=''
+  document.getElementById('terminer-photo').value=''
+  signatureData=null
+  openModal('terminer')
+}
+
+// Override btn terminer pour demander signature
+document.addEventListener('DOMContentLoaded',()=>{
+  const btn=document.getElementById('btn-terminer')
+  if(btn) btn.onclick=()=>{
+    const auteur=document.getElementById('terminer-auteur').value.trim()
+    if(!auteur){showToast('Veuillez indiquer votre nom','error');return}
+    openModal('signature')
+    setTimeout(initSignatureCanvas,100)
+  }
+})
+
+async function doConfirmerTerminer(){
+  const auteur=document.getElementById('terminer-auteur').value.trim()
+  if(!auteur){showToast('Veuillez indiquer votre nom','error');return}
+  const comment=document.getElementById('terminer-comment').value.trim()
+  const photoFile=document.getElementById('terminer-photo').files[0]
+  const dureeH=parseFloat((chronoSeconds/3600).toFixed(2))
+
+  if(photoFile){
+    const ext=photoFile.name.split('.').pop()
+    const path=currentBonId+'/'+Date.now()+'_apres.'+ext
+    const {error:upErr}=await sb.storage.from('photos').upload(path,photoFile)
+    if(!upErr){
+      const {data:{publicUrl}}=sb.storage.from('photos').getPublicUrl(path)
+      await sb.from('photos').insert([{bon_id:currentBonId,url:publicUrl,legende:'APRÈS'}])
+    }
+  }
+
+  // Uploader la signature comme photo
+  if(signatureData){
+    const blob=await (await fetch(signatureData)).blob()
+    const path=currentBonId+'/signature_'+Date.now()+'.png'
+    const {error:sigErr}=await sb.storage.from('photos').upload(path,blob)
+    if(!sigErr){
+      const {data:{publicUrl}}=sb.storage.from('photos').getPublicUrl(path)
+      await sb.from('photos').insert([{bon_id:currentBonId,url:publicUrl,legende:'SIGNATURE'}])
+    }
+  }
+
+  const extra={statut:'termine',date_fin:new Date().toISOString(),suppression_prevue:new Date(Date.now()+15*24*60*60*1000).toISOString()}
+  if(chronoSeconds>0) extra.duree_reelle=dureeH
+  await sb.from('bons_travail').update(extra).eq('id',currentBonId)
+
+  const contenu=comment?'✅ Intervention terminée — '+comment:'✅ Intervention terminée par '+auteur
+  await sb.from('commentaires').insert([{bon_id:currentBonId,auteur,contenu}])
+
+  const bon=allBons.find(b=>b.id===currentBonId)
+  const {data:photos}=await sb.from('photos').select('*').eq('bon_id',currentBonId).order('created_at')
+  const {data:comments}=await sb.from('commentaires').select('*').eq('bon_id',currentBonId).order('created_at')
+
+  showToast('Génération du PDF…')
+  try{ await genererEtEnvoyerPDF(bon,photos||[],comments||[],auteur,dureeH,signatureData) }catch(e){ console.error('PDF:',e) }
+
+  chronoStop()
+  await loadBons();await loadBonPhotos();renderDashboard();renderBonsTable()
+  closeModal('terminer');closeModal('detail')
+  showToast('✅ Bon clôturé ! PDF envoyé par email.')
+}
+
+// ── RÉCURRENCES ──
+let recurrences=[]
+
+async function loadRecurrences(){
+  const stored=localStorage.getItem('domofrance_recurrences')
+  if(stored) try{recurrences=JSON.parse(stored)}catch(e){recurrences=[]}
+  checkRecurrences()
+}
+
+function checkRecurrences(){
+  const today=new Date().toISOString().slice(0,10)
+  recurrences.forEach(async r=>{
+    if(r.next_date<=today){
+      const payload={titre:r.titre,categorie:r.categorie,priorite:'normale',statut:'planifie',batiment_id:r.batiment_id||null,technicien_id:r.technicien_id||null,description:(r.description||'')+'\n🔄 Créé automatiquement (récurrence)',date_prevue:r.next_date}
+      const {error}=await sb.from('bons_travail').insert([payload])
+      if(!error){
+        r.next_date=new Date(new Date(r.next_date).getTime()+r.freq_days*24*60*60*1000).toISOString().slice(0,10)
+        saveRecurrences()
+        showToast('🔄 Bon récurrent créé : '+r.titre)
+        await loadBons();renderDashboard()
+      }
+    }
+  })
+}
+
+function saveRecurrences(){
+  localStorage.setItem('domofrance_recurrences',JSON.stringify(recurrences))
+}
+
+function saveRecurrence(){
+  const titre=document.getElementById('rec-titre').value.trim()
+  if(!titre){showToast('Titre obligatoire','error');return}
+  const r={
+    id:Date.now().toString(),titre,
+    categorie:document.getElementById('rec-cat').value,
+    batiment_id:document.getElementById('rec-bat').value||null,
+    technicien_id:document.getElementById('rec-tech').value||null,
+    description:document.getElementById('rec-desc').value||'',
+    freq_days:parseInt(document.getElementById('rec-freq').value),
+    next_date:document.getElementById('rec-date').value||new Date().toISOString().slice(0,10)
+  }
+  recurrences.push(r)
+  saveRecurrences()
+  closeModal('recurrence')
+  showToast('🔄 Récurrence créée !')
+  checkRecurrences()
+}
+
+function populateRecurrenceSelects(){
+  const batOpts=allBats.map(b=>'<option value="'+b.id+'">'+b.nom+'</option>').join('')
+  const techOpts=allTechs.map(t=>'<option value="'+t.id+'">'+t.prenom+' '+t.nom+'</option>').join('')
+  const recBat=document.getElementById('rec-bat')
+  const recTech=document.getElementById('rec-tech')
+  if(recBat) recBat.innerHTML='<option value="">— Tous —</option>'+batOpts
+  if(recTech) recTech.innerHTML='<option value="">— Non assigné —</option>'+techOpts
+}
+
+// Override showPage pour charger historique et recurrences
+const origShowPage=showPage
+function showPage(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
+  document.getElementById('page-'+name).classList.add('active')
+  const pageTitles2={dashboard:'Tableau de bord',bons:'Bons de travail',planning:'Planning',techniciens:'Techniciens',batiments:'Bâtiments',stats:'Statistiques',historique:'Historique'}
+  document.getElementById('page-title').textContent=pageTitles2[name]||name
+  if(el) el.classList.add('active')
+  closeSidebar()
+  if(name==='bons'){renderBonsTable();populateFilterBat()}
+  if(name==='techniciens') renderTechs()
+  if(name==='batiments') renderBatiments()
+  if(name==='stats') renderStats()
+  if(name==='historique') renderHistorique()
+}
+
+// Ajouter bouton récurrence dans topbar bons
+// Override init pour charger récurrences et populate filter
+const origInit=init
+async function init(){
+  await Promise.all([loadBons(),loadTechs(),loadBats()])
+  await loadBonPhotos()
+  populateFilterBat()
+  populateRecurrenceSelects()
+  renderDashboard();renderCalendar()
+  await loadRecurrences()
+  sb.channel('bons').on('postgres_changes',{event:'*',schema:'public',table:'bons_travail'},()=>{loadBons().then(async()=>{await loadBonPhotos();populateFilterBat();renderDashboard();renderBonsTable();renderStats()})}).subscribe()
+  setTimeout(supprimerBonsExpires,3000)
+}
+
+// Bouton récurrence dans page bons
+document.addEventListener('DOMContentLoaded',()=>{
+  const bonsTitre=document.querySelector('#page-bons .filter-tab')
+  if(bonsTitre){
+    const recBtn=document.createElement('button')
+    recBtn.className='btn btn-secondary'
+    recBtn.style.cssText='padding:7px 14px;font-size:13px;margin-left:8px'
+    recBtn.textContent='🔄 Récurrences'
+    recBtn.onclick=()=>{populateRecurrenceSelects();openModal('recurrence')}
+    bonsTitre.parentElement.parentElement.insertBefore(recBtn,bonsTitre.parentElement.nextSibling)
+  }
+})
+
 </script>
 </body>
 </html>
