@@ -604,6 +604,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
   </div>
 </div>
 
+
+<!-- MODAL DETAIL BATIMENT -->
+<div class="modal-overlay" id="modal-batDetail" style="display:none" onclick="if(event.target===this)closeModal('batDetail')">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-head">
+      <div class="modal-title" id="bat-detail-title"></div>
+      <button class="modal-close" onclick="closeModal('batDetail')">✕</button>
+    </div>
+    <div class="modal-body" id="bat-detail-body"></div>
+  </div>
+</div>
+
 <!-- MODAL TECHNICIEN -->
 <div class="modal-overlay" id="modal-addTech" style="display:none" onclick="if(event.target===this)closeModal('addTech')">
   <div class="modal">
@@ -629,18 +641,51 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 <!-- MODAL BATIMENT -->
 <div class="modal-overlay" id="modal-addBat" style="display:none" onclick="if(event.target===this)closeModal('addBat')">
   <div class="modal">
-    <div class="modal-head"><div class="modal-title">Nouveau bâtiment</div><button class="modal-close" onclick="closeModal('addBat')">✕</button></div>
+    <div class="modal-head"><div class="modal-title" id="bat-modal-title">Nouveau bâtiment</div><button class="modal-close" onclick="closeModal('addBat')">✕</button></div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">Nom *</label><input class="form-input" id="b-nom" placeholder="Résidence Les Pins"></div>
+      <!-- Photo du bâtiment -->
+      <div class="form-group">
+        <label class="form-label">📷 Photo du bâtiment</label>
+        <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--gray);position:relative;overflow:hidden" id="bat-photo-label">
+          <div id="bat-photo-preview-container">
+            <div style="font-size:28px">🏢</div>
+            <span style="font-size:12px;color:var(--text3)">Cliquer pour ajouter une photo</span>
+          </div>
+          <input type="file" accept="image/*" style="display:none" id="b-photo" onchange="previewBatPhoto(event)">
+        </label>
+      </div>
+      <div class="form-group"><label class="form-label">Nom du bâtiment *</label><input class="form-input" id="b-nom" placeholder="Résidence Les Pins"></div>
       <div class="form-group"><label class="form-label">Adresse *</label><input class="form-input" id="b-adresse"></div>
+      <div class="form-group"><label class="form-label">Ville *</label><input class="form-input" id="b-ville"></div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Ville *</label><input class="form-input" id="b-ville"></div>
-        <div class="form-group"><label class="form-label">Nb logements</label><input type="number" class="form-input" id="b-logements"></div>
+        <div class="form-group">
+          <label class="form-label">Statut occupation</label>
+          <select class="form-select" id="b-occupation">
+            <option value="proprietaire">🏠 Propriétaire</option>
+            <option value="locataire">🔑 Locataire</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Résidence gérée par Domofrance</label>
+          <select class="form-select" id="b-residence">
+            <option value="true">✅ Oui</option>
+            <option value="false">❌ Non</option>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px;padding-top:6px;border-top:1px solid var(--border)">👤 Contact sur place</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nom du contact</label><input class="form-input" id="b-contact-nom" placeholder="Jean Dupont"></div>
+        <div class="form-group"><label class="form-label">Rôle / Fonction</label><input class="form-input" id="b-contact-role" placeholder="Gardien, Syndic…"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Téléphone</label><input class="form-input" id="b-contact-tel" placeholder="06 00 00 00 00"></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="b-contact-email" placeholder="contact@email.fr"></div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('addBat')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveBat()">✓ Ajouter</button>
+      <button class="btn btn-primary" id="btn-save-bat" onclick="saveBat()">✓ Ajouter</button>
     </div>
   </div>
 </div>
@@ -714,6 +759,7 @@ sb.auth.onAuthStateChange((event,session)=>{
 })
 
 let allBons=[], allTechs=[], allBats=[], bonPhotos={}
+let currentBatId=null, currentEditBatId=null
 let currentFilter='all', currentBonId=null, createPhotoFiles=[]
 let calDate=new Date()
 
@@ -1187,10 +1233,49 @@ async function saveBat(){
   const nom=document.getElementById('b-nom').value.trim()
   const adresse=document.getElementById('b-adresse').value.trim()
   const ville=document.getElementById('b-ville').value.trim()
-  if(!nom||!adresse||!ville) return
-  const {error}=await sb.from('batiments').insert([{nom,adresse,ville,nb_logements:parseInt(document.getElementById('b-logements').value)||0}])
-  if(!error){showToast('Bâtiment ajouté !');closeModal('addBat');await loadBats();renderBatiments()}
-  else showToast(error.message,'error')
+  if(!nom||!adresse||!ville){showToast('Nom, adresse et ville obligatoires','error');return}
+  
+  const payload={
+    nom,adresse,ville,
+    statut_occupation:document.getElementById('b-occupation').value,
+    residence_propre:document.getElementById('b-residence').value==='true',
+    contact_nom:document.getElementById('b-contact-nom').value||null,
+    contact_role:document.getElementById('b-contact-role').value||null,
+    contact_telephone:document.getElementById('b-contact-tel').value||null,
+    contact_email:document.getElementById('b-contact-email').value||null,
+  }
+
+  let batId=currentEditBatId
+  if(batId){
+    // Modification
+    const {error}=await sb.from('batiments').update(payload).eq('id',batId)
+    if(error){showToast(error.message,'error');return}
+  } else {
+    // Création
+    const {data,error}=await sb.from('batiments').insert([payload]).select().single()
+    if(error){showToast(error.message,'error');return}
+    batId=data.id
+  }
+
+  // Upload photo si présente
+  const photoFile=document.getElementById('b-photo').files[0]
+  if(photoFile&&batId){
+    const ext=photoFile.name.split('.').pop()
+    const path=`batiments/${batId}/${Date.now()}.${ext}`
+    const {error:upErr}=await sb.storage.from('photos').upload(path,photoFile)
+    if(!upErr){
+      const {data:{publicUrl}}=sb.storage.from('photos').getPublicUrl(path)
+      await sb.from('batiments').update({photo_url:publicUrl}).eq('id',batId)
+    }
+  }
+
+  currentEditBatId=null
+  document.getElementById('bat-modal-title').textContent='Nouveau bâtiment'
+  document.getElementById('btn-save-bat').textContent='✓ Ajouter'
+  document.getElementById('bat-photo-preview-container').innerHTML='<div style="font-size:28px">🏢</div><span style="font-size:12px;color:var(--text3)">Cliquer pour ajouter une photo</span>'
+  showToast(batId?'Bâtiment mis à jour !':'Bâtiment ajouté !')
+  closeModal('addBat')
+  await loadBats(); renderBatiments()
 }
 
 function renderTechs(){
@@ -1224,18 +1309,112 @@ function renderBatiments(){
     const bons=allBons.filter(x=>x.batiment_id===b.id)
     const enc=bons.filter(x=>x.statut==='en_cours').length
     const urg=bons.filter(x=>x.priorite==='urgence'&&x.statut!=='termine').length
-    return `<div class="card" style="padding:0;overflow:hidden">
-      <div style="background:var(--blue-light);height:70px;display:flex;align-items:center;justify-content:center;font-size:36px">🏢</div>
-      <div style="padding:16px 18px">
+    const occLabel=b.statut_occupation==='locataire'?'🔑 Locataire':'🏠 Propriétaire'
+    const occColor=b.statut_occupation==='locataire'?'var(--orange)':'var(--green)'
+    const occBg=b.statut_occupation==='locataire'?'var(--orange-light)':'var(--green-light)'
+    return `<div class="card" style="padding:0;overflow:hidden;cursor:pointer" onclick="openBatDetail('${b.id}')">
+      <div style="height:120px;overflow:hidden;position:relative;background:var(--blue-light)">
+        ${b.photo_url
+          ? `<img src="${b.photo_url}" style="width:100%;height:100%;object-fit:cover">`
+          : `<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:42px">🏢</div>`}
+        <div style="position:absolute;top:8px;right:8px;background:${occBg};color:${occColor};font-size:10px;font-weight:700;border-radius:6px;padding:3px 8px">${occLabel}</div>
+        ${b.residence_propre?'<div style="position:absolute;top:8px;left:8px;background:var(--blue-light);color:var(--blue);font-size:10px;font-weight:700;border-radius:6px;padding:3px 8px">✅ Domofrance</div>':''}
+      </div>
+      <div style="padding:14px 16px">
         <div style="font-size:15px;font-weight:700;margin-bottom:2px">${b.nom}</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">${b.adresse}, ${b.ville} · ${b.nb_logements} logements</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
-          <div style="background:var(--gray);border-radius:8px;padding:8px 4px"><div style="font-size:18px;font-weight:700;color:var(--blue)">${bons.length}</div><div style="font-size:10px;color:var(--text3)">Total</div></div>
-          <div style="background:${enc>0?'var(--orange-light)':'var(--gray)'};border-radius:8px;padding:8px 4px"><div style="font-size:18px;font-weight:700;color:${enc>0?'var(--orange)':'var(--text3)'}">${enc}</div><div style="font-size:10px;color:var(--text3)">En cours</div></div>
-          <div style="background:${urg>0?'var(--red-light)':'var(--gray)'};border-radius:8px;padding:8px 4px"><div style="font-size:18px;font-weight:700;color:${urg>0?'var(--red)':'var(--text3)'}">${urg}</div><div style="font-size:10px;color:var(--text3)">Urgences</div></div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${b.adresse}, ${b.ville}</div>
+        ${b.contact_nom?`<div style="font-size:12px;color:var(--text2);margin-bottom:8px;display:flex;align-items:center;gap:6px">👤 ${b.contact_nom}${b.contact_role?` <span style="color:var(--text3)">— ${b.contact_role}</span>`:''}</div>`:''}
+        ${b.contact_telephone?`<div style="font-size:12px;margin-bottom:10px"><a href="tel:${b.contact_telephone}" style="color:var(--blue);font-weight:600" onclick="event.stopPropagation()">📞 ${b.contact_telephone}</a></div>`:''}
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center">
+          <div style="background:var(--gray);border-radius:8px;padding:6px 4px"><div style="font-size:16px;font-weight:700;color:var(--blue)">${bons.length}</div><div style="font-size:10px;color:var(--text3)">Bons</div></div>
+          <div style="background:${enc>0?'var(--orange-light)':'var(--gray)'};border-radius:8px;padding:6px 4px"><div style="font-size:16px;font-weight:700;color:${enc>0?'var(--orange)':'var(--text3)'}">${enc}</div><div style="font-size:10px;color:var(--text3)">En cours</div></div>
+          <div style="background:${urg>0?'var(--red-light)':'var(--gray)'};border-radius:8px;padding:6px 4px"><div style="font-size:16px;font-weight:700;color:${urg>0?'var(--red)':'var(--text3)'}">${urg}</div><div style="font-size:10px;color:var(--text3)">Urgences</div></div>
         </div>
       </div>
-    </div>`}).join('')
+    </div>`}).join('')||'<div style="color:var(--text3);font-size:13px;padding:20px">Aucun bâtiment</div>'
+}
+
+function openBatDetail(id){
+  const b=allBats.find(x=>x.id===id)
+  if(!b) return
+  currentBatId=id
+  document.getElementById('bat-detail-title').textContent=b.nom
+  const occ=b.statut_occupation==='locataire'?'🔑 Locataire':'🏠 Propriétaire'
+  document.getElementById('bat-detail-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div>
+        ${b.photo_url?`<img src="${b.photo_url}" style="width:100%;border-radius:10px;margin-bottom:14px;max-height:200px;object-fit:cover">`:
+        `<div style="width:100%;height:120px;background:var(--gray2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:14px">🏢</div>`}
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--blue);font-weight:600;margin-bottom:14px">
+          📷 Changer la photo
+          <input type="file" accept="image/*" style="display:none" onchange="uploadBatPhoto(event,'${b.id}')">
+        </label>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${[['Adresse',b.adresse+', '+b.ville],['Statut',occ],['Résidence Domofrance',b.residence_propre?'✅ Oui':'❌ Non']].map(([k,v])=>`
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray2)">
+              <span style="font-size:12px;color:var(--text3)">${k}</span>
+              <span style="font-size:12px;font-weight:600">${v}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">👤 Contact sur place</div>
+        ${b.contact_nom?`
+          <div style="background:var(--gray);border-radius:10px;padding:14px">
+            <div style="font-size:15px;font-weight:700;margin-bottom:4px">${b.contact_nom}</div>
+            ${b.contact_role?`<div style="font-size:12px;color:var(--text3);margin-bottom:10px">${b.contact_role}</div>`:''}
+            ${b.contact_telephone?`<a href="tel:${b.contact_telephone}" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:8px;font-size:13px">📞 ${b.contact_telephone}</a>`:''}
+            ${b.contact_email?`<a href="mailto:${b.contact_email}" class="btn btn-secondary" style="width:100%;justify-content:center;font-size:13px">✉️ ${b.contact_email}</a>`:''}
+          </div>`:'<div style="color:var(--text3);font-size:13px">Aucun contact renseigné</div>'}
+        <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:14px" onclick="editBatiment('${b.id}')">✏️ Modifier ce bâtiment</button>
+      </div>
+    </div>`
+  openModal('batDetail')
+}
+
+async function uploadBatPhoto(e, batId){
+  const file=e.target.files[0]
+  if(!file) return
+  showToast('Upload en cours…')
+  const ext=file.name.split('.').pop()
+  const path=`batiments/${batId}/${Date.now()}.${ext}`
+  const {error}=await sb.storage.from('photos').upload(path,file)
+  if(!error){
+    const {data:{publicUrl}}=sb.storage.from('photos').getPublicUrl(path)
+    await sb.from('batiments').update({photo_url:publicUrl}).eq('id',batId)
+    await loadBats(); renderBatiments()
+    showToast('Photo mise à jour !')
+    closeModal('batDetail')
+  } else showToast('Erreur upload','error')
+}
+
+function editBatiment(id){
+  const b=allBats.find(x=>x.id===id)
+  if(!b) return
+  currentEditBatId=id
+  document.getElementById('bat-modal-title').textContent='Modifier le bâtiment'
+  document.getElementById('btn-save-bat').textContent='✓ Enregistrer'
+  document.getElementById('b-nom').value=b.nom||''
+  document.getElementById('b-adresse').value=b.adresse||''
+  document.getElementById('b-ville').value=b.ville||''
+  document.getElementById('b-occupation').value=b.statut_occupation||'proprietaire'
+  document.getElementById('b-residence').value=b.residence_propre?'true':'false'
+  document.getElementById('b-contact-nom').value=b.contact_nom||''
+  document.getElementById('b-contact-role').value=b.contact_role||''
+  document.getElementById('b-contact-tel').value=b.contact_telephone||''
+  document.getElementById('b-contact-email').value=b.contact_email||''
+  if(b.photo_url){
+    document.getElementById('bat-photo-preview-container').innerHTML=`<img src="${b.photo_url}" style="width:100%;max-height:100px;object-fit:cover;border-radius:6px">`
+  }
+  closeModal('batDetail')
+  openModal('addBat')
+}
+
+function previewBatPhoto(e){
+  const file=e.target.files[0]
+  if(!file) return
+  const url=URL.createObjectURL(file)
+  document.getElementById('bat-photo-preview-container').innerHTML=`<img src="${url}" style="width:100%;max-height:100px;object-fit:cover;border-radius:6px">`
 }
 
 function renderStats(){
