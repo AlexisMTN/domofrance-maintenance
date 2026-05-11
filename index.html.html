@@ -456,7 +456,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           </div>
           <div id="d-reopen-btn"></div>
           <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:8px;font-size:12px;padding:8px" onclick="ouvrirSuppression()">🗑️ Supprimer ce bon</button>
-          <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:8px;font-size:12px" onclick="ouvrirSuppression()">🗑️ Supprimer ce bon</button>
+          
         </div>
       </div>
     </div>
@@ -590,30 +590,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
   </div>
 </div>
 
-<!-- MODAL SUPPRESSION BON -->
-<div class="modal-overlay" id="modal-supprimer" style="display:none" onclick="if(event.target===this)closeModal('supprimer')">
-  <div class="modal" style="max-width:400px">
-    <div class="modal-head">
-      <div class="modal-title">🗑️ Supprimer ce bon</div>
-      <button class="modal-close" onclick="closeModal('supprimer')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div style="background:var(--red-light);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--red);font-weight:500">
-        ⚠️ Action irréversible. Le bon et toutes ses photos seront définitivement supprimés.
-      </div>
-      <div id="supp-bon-info" style="background:var(--gray);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--text2)"></div>
-      <div class="form-group">
-        <label class="form-label">Code de suppression *</label>
-        <input type="password" class="form-input" id="supp-code" placeholder="••••••" style="font-size:20px;letter-spacing:6px;text-align:center" onkeydown="if(event.key==='Enter')confirmerSuppression()">
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">Code confidentiel réservé aux responsables</div>
-      </div>
-      <div id="supp-error" style="display:none;background:var(--red-light);color:var(--red);border-radius:6px;padding:8px 12px;font-size:12px;margin-top:8px">❌ Code incorrect — réessayez</div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('supprimer')">Annuler</button>
-      <button class="btn btn-danger" onclick="confirmerSuppression()">🗑️ Supprimer définitivement</button>
-    </div>
-  </div>
+</div>
 </div>
 
 <!-- MODAL TECHNICIEN -->
