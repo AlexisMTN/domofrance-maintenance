@@ -103,12 +103,112 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 .photo-add-btn{aspect-ratio:4/3;border:2px dashed var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);font-size:12px;gap:4px;background:var(--gray);transition:all .15s}
 .photo-add-btn:hover{border-color:var(--blue);color:var(--blue)}
 
+/* ── TABLETTE (768–1024px) ── */
+@media(max-width:1024px) and (min-width:769px){
+  :root{--sidebar:200px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .modal{max-width:90vw!important}
+  .modal .modal-body > div[style*="grid-template-columns:1fr 300px"]{grid-template-columns:1fr!important}
+  .modal .modal-body > div[style*="grid-template-columns:1fr 280px"]{grid-template-columns:1fr!important}
+}
+
+/* ── MOBILE (< 768px) ── */
 @media(max-width:768px){
-  .sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}
-  .main{margin-left:0}.menu-btn{display:flex}
-  .stats-grid{grid-template-columns:repeat(2,1fr)}.form-row{grid-template-columns:1fr}
-  .content{padding:16px}.topbar{padding:0 16px}
+  :root{--sidebar:280px;--header:56px}
+
+  /* Sidebar en tiroir */
+  .sidebar{transform:translateX(-100%);z-index:200;box-shadow:4px 0 20px rgba(0,0,0,.2)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .menu-btn{display:flex}
+
+  /* Topbar */
+  .topbar{padding:0 14px;gap:8px}
+  .page-title{font-size:15px}
+  .topbar .btn{padding:7px 12px;font-size:12px}
+
+  /* Contenu */
+  .content{padding:12px}
+
+  /* Stats: 2 colonnes sur mobile */
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+  .stat-card{padding:12px 14px;gap:10px}
+  .stat-val{font-size:22px}
+  .stat-label{font-size:11px}
+  .stat-icon{width:38px;height:38px;font-size:18px}
+
+  /* Dashboard 2 colonnes → 1 colonne */
+  .content > .page > div[style*="grid-template-columns:2fr 1fr"]{grid-template-columns:1fr!important;gap:12px}
+
+  /* Formulaires */
+  .form-row{grid-template-columns:1fr}
+
+  /* Tableau bons : masquer colonnes secondaires */
+  .table th:nth-child(4),.table td:nth-child(4),
+  .table th:nth-child(8),.table td:nth-child(8){display:none}
+  .table th,.table td{padding:9px 10px;font-size:12px}
+
+  /* Modals plein écran */
+  .modal-overlay{padding:0;align-items:flex-end}
+  .modal{border-radius:16px 16px 0 0;max-height:92vh!important;max-width:100%!important;width:100%}
+  .modal-body > div[style*="grid-template-columns"]{grid-template-columns:1fr!important}
+
+  /* Statut boutons */
   .statut-btns{grid-template-columns:1fr 1fr}
+  .statut-btn{padding:10px 8px;font-size:12px}
+
+  /* Chrono */
+  .chrono-time{font-size:28px}
+  .chrono-btns{flex-wrap:wrap;gap:6px}
+  .chrono-btns .btn{font-size:11px;padding:6px 10px}
+
+  /* Photos grid */
+  .photos-grid{grid-template-columns:repeat(2,1fr)}
+
+  /* Filtres bons */
+  .filter-tab{padding:5px 10px;font-size:12px}
+  #search-input{width:100%!important;margin-left:0!important}
+
+  /* Planning calendrier */
+  #cal-grid > div > div:last-child{font-size:9px}
+
+  /* Stats page */
+  .content > .page > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important;gap:12px}
+
+  /* Cards techniciens/bâtiments */
+  #techs-grid,#bats-grid{grid-template-columns:1fr!important}
+
+  /* Bottom nav mobile */
+  .mobile-nav{display:flex}
+}
+
+/* ── BOTTOM NAV (mobile uniquement) ── */
+.mobile-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--white);
+  border-top:1px solid var(--border);
+  z-index:150;
+  padding:6px 0 env(safe-area-inset-bottom,6px);
+}
+.mobile-nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:6px 4px;cursor:pointer;color:var(--text3);font-size:9px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.5px;border:none;background:none;
+}
+.mobile-nav-item.active{color:var(--blue)}
+.mobile-nav-item span{font-size:20px}
+
+/* Compensation bottom nav sur mobile */
+@media(max-width:768px){
+  .content{padding-bottom:80px}
+}
+
+/* ── GRAND ÉCRAN (> 1400px) ── */
+@media(min-width:1400px){
+  :root{--sidebar:240px}
+  .stats-grid{grid-template-columns:repeat(4,1fr)}
+  .content{padding:32px}
 }
 </style>
 </head>
@@ -184,7 +284,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           <input id="search-input" class="form-input" placeholder="Rechercher…" style="margin-left:auto;width:200px" oninput="renderBonsTable()">
         </div>
         <div class="card"><div style="overflow-x:auto">
-          <table class="table"><thead><tr><th>N°</th><th>Titre</th><th>Bâtiment</th><th>Technicien</th><th>Priorité</th><th>Statut</th><th>Durée</th><th>Date</th></tr></thead>
+          <table class="table"><thead><tr><th>N°</th><th>Photo</th><th>Titre</th><th>Bâtiment</th><th>Technicien</th><th>Priorité</th><th>Statut</th><th>Durée</th><th>Date</th></tr></thead>
           <tbody id="bons-tbody"></tbody></table>
         </div></div>
       </div>
@@ -257,10 +357,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
         <div class="form-group"><label class="form-label">Date prévue</label><input type="date" class="form-input" id="f-date"></div>
       </div>
       <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="f-desc" placeholder="Décrivez le problème…"></textarea></div>
+      <div class="form-group">
+        <label class="form-label">📷 Photos (optionnel)</label>
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--blue);font-weight:600;background:var(--gray)">
+          📷 Ajouter des photos
+          <input type="file" accept="image/*" multiple style="display:none" id="f-photos" onchange="previewCreatePhotos(event)">
+        </label>
+        <div id="f-photos-preview" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('create')">Annuler</button>
-      <button class="btn btn-primary" onclick="createBon()">✓ Créer le bon</button>
+      <button class="btn btn-primary" id="btn-create" onclick="createBon()">✓ Créer le bon</button>
     </div>
   </div>
 </div>
@@ -384,8 +492,8 @@ const SUPABASE_URL = 'https://eomijzmsevgyyeroqdbo.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_4N6hRNVA5ibzbKAi30_Txg_VIYS4okb'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-let allBons=[], allTechs=[], allBats=[]
-let currentFilter='all', currentBonId=null
+let allBons=[], allTechs=[], allBats=[], bonPhotos={}
+let currentFilter='all', currentBonId=null, createPhotoFiles=[]
 let calDate=new Date()
 
 // CHRONOMETRE
@@ -454,8 +562,15 @@ const STATUT_LABEL={planifie:'Planifié',en_cours:'En cours',en_attente:'En atte
 
 async function init(){
   await Promise.all([loadBons(),loadTechs(),loadBats()])
+  await loadBonPhotos()
   renderDashboard(); renderCalendar()
-  sb.channel('bons').on('postgres_changes',{event:'*',schema:'public',table:'bons_travail'},()=>{loadBons().then(()=>{renderDashboard();renderBonsTable();renderStats()})}).subscribe()
+  sb.channel('bons').on('postgres_changes',{event:'*',schema:'public',table:'bons_travail'},()=>{loadBons().then(async()=>{await loadBonPhotos();renderDashboard();renderBonsTable();renderStats()})}).subscribe()
+}
+
+async function loadBonPhotos(){
+  const {data}=await sb.from('photos').select('bon_id,url').order('created_at',{ascending:true})
+  bonPhotos={}
+  if(data) data.forEach(p=>{if(!bonPhotos[p.bon_id])bonPhotos[p.bon_id]=p.url})
 }
 
 async function loadBons(){
@@ -523,9 +638,12 @@ function renderBonsTable(){
     const ms=!search||b.titre.toLowerCase().includes(search)||(b.batiments?.nom||'').toLowerCase().includes(search)
     return mf&&ms
   })
-  document.getElementById('bons-tbody').innerHTML=filtered.map(b=>`
-    <tr onclick="openDetail('${b.id}')">
+  document.getElementById('bons-tbody').innerHTML=filtered.map(b=>{
+    const firstPhoto=bonPhotos[b.id]
+    const photoCell=firstPhoto?`<td><img src="${firstPhoto}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--border)"></td>`:`<td><div style="width:40px;height:40px;border-radius:6px;background:var(--gray2);display:flex;align-items:center;justify-content:center;font-size:16px">📷</div></td>`
+    return `<tr onclick="openDetail('${b.id}')">
       <td style="font-weight:600;font-size:12px;color:var(--text3)">#${b.numero||'—'}</td>
+      ${photoCell}
       <td style="font-weight:600">${b.titre}</td>
       <td>${b.batiments?.nom||'—'}${b.zone?`<br><span style="font-size:11px;color:var(--text3)">${b.zone}</span>`:''}</td>
       <td>${b.techniciens?`${b.techniciens.prenom} ${b.techniciens.nom}`:'<span style="color:var(--text3)">—</span>'}</td>
@@ -533,7 +651,7 @@ function renderBonsTable(){
       <td>${badge(b.statut)}</td>
       <td style="font-size:12px;color:var(--text2)">${b.duree_reelle?`<strong>${b.duree_reelle}h</strong>`:b.duree_estimee?`~${b.duree_estimee}h`:'—'}</td>
       <td style="font-size:12px;color:var(--text3)">${b.date_prevue?new Date(b.date_prevue).toLocaleDateString('fr-FR'):'—'}</td>
-    </tr>`).join('')||'<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3)">Aucun bon</td></tr>'
+    </tr>`}).join('')||'<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3)">Aucun bon</td></tr>'
 }
 
 function filterBons(f,el){
@@ -667,16 +785,51 @@ async function deletePhoto(photoId,url,e){
   showToast('Photo supprimée')
 }
 
+function previewCreatePhotos(e){
+  createPhotoFiles=Array.from(e.target.files)
+  const preview=document.getElementById('f-photos-preview')
+  preview.innerHTML=createPhotoFiles.map((f,i)=>{
+    const url=URL.createObjectURL(f)
+    return `<div style="position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;border:1px solid var(--border)">
+      <img src="${url}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="removeCreatePhoto(${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px">✕</button>
+    </div>`}).join('')
+}
+
+function removeCreatePhoto(i){
+  createPhotoFiles.splice(i,1)
+  const dt=new DataTransfer()
+  createPhotoFiles.forEach(f=>dt.items.add(f))
+  document.getElementById('f-photos').files=dt.files
+  previewCreatePhotos({target:{files:dt.files}})
+}
+
 async function createBon(){
   const titre=document.getElementById('f-titre').value.trim()
   if(!titre) return
+  document.getElementById('btn-create').textContent='Création…'
+  document.getElementById('btn-create').disabled=true
   const payload={titre,categorie:document.getElementById('f-cat').value,priorite:document.getElementById('f-prio').value,statut:'planifie',batiment_id:document.getElementById('f-bat').value||null,technicien_id:document.getElementById('f-tech').value||null,zone:document.getElementById('f-zone').value||null,date_prevue:document.getElementById('f-date').value||null,description:document.getElementById('f-desc').value||null}
-  const {error}=await sb.from('bons_travail').insert([payload])
+  const {data:newBon,error}=await sb.from('bons_travail').insert([payload]).select().single()
+  if(!error&&newBon&&createPhotoFiles.length>0){
+    for(const file of createPhotoFiles){
+      const ext=file.name.split('.').pop()
+      const path=`${newBon.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+      const {error:upErr}=await sb.storage.from('photos').upload(path,file)
+      if(!upErr){
+        const {data:{publicUrl}}=sb.storage.from('photos').getPublicUrl(path)
+        await sb.from('photos').insert([{bon_id:newBon.id,url:publicUrl}])
+      }
+    }
+  }
+  document.getElementById('btn-create').textContent='✓ Créer le bon'
+  document.getElementById('btn-create').disabled=false
   if(!error){
     showToast('✅ Bon créé avec succès !')
     closeModal('create')
     document.getElementById('f-titre').value=''; document.getElementById('f-desc').value=''
-    await loadBons(); renderDashboard(); renderBonsTable()
+    document.getElementById('f-photos-preview').innerHTML=''; createPhotoFiles=[]
+    await loadBons(); await loadBonPhotos(); renderDashboard(); renderBonsTable()
   } else showToast('Erreur: '+error.message,'error')
 }
 
@@ -824,6 +977,22 @@ function showToast(msg,type='success'){const t=document.createElement('div');t.c
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
 init()
+</script>
+
+<!-- NAVIGATION MOBILE EN BAS -->
+<nav class="mobile-nav" id="mobile-nav">
+  <button class="mobile-nav-item active" onclick="showPage('dashboard',this);setMobileNav(this)"><span>📊</span>Accueil</button>
+  <button class="mobile-nav-item" onclick="showPage('bons',this);setMobileNav(this)"><span>📋</span>Bons</button>
+  <button class="mobile-nav-item" onclick="openModal('create')"><span style="background:var(--blue);color:#fff;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:2px">+</span>Créer</button>
+  <button class="mobile-nav-item" onclick="showPage('techniciens',this);setMobileNav(this)"><span>👷</span>Équipe</button>
+  <button class="mobile-nav-item" onclick="showPage('batiments',this);setMobileNav(this)"><span>🏢</span>Sites</button>
+</nav>
+
+<script>
+function setMobileNav(el){
+  document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'))
+  el.classList.add('active')
+}
 </script>
 </body>
 </html>
