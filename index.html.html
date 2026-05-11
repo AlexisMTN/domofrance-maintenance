@@ -9,6 +9,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Domofrance">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--blue:#DC0D4D;--blue-mid:#C50A44;--blue-dark:#A8083A;--blue-light:#FCE4EC;--navy:#183960;--green:#2E7D32;--green-light:#E8F5E9;--orange:#E65100;--orange-light:#FFF3E0;--red:#C62828;--red-light:#FFEBEE;--yellow:#F57F17;--yellow-light:#FFF8E1;--gray:#F5F6FA;--gray2:#ECEFF1;--gray3:#B0BEC5;--text:#183960;--text2:#546E7A;--text3:#90A4AE;--white:#fff;--border:#E0E7EF;--sidebar:220px;--header:60px}
@@ -172,6 +174,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
       <div class="nav-section">Gestion</div>
       <div class="nav-item" onclick="showPage('techniciens',this)">👷 Techniciens</div>
       <div class="nav-item" onclick="showPage('batiments',this)">🏢 Bâtiments</div>
+      <div class="nav-item" onclick="showPage('carte',this)">🗺️ Carte</div>
+      <div class="nav-item" onclick="showPage('carte',this)">🗺️ Carte</div>
       <div class="nav-item" onclick="showPage('stats',this)">📈 Statistiques</div>
       <div class="nav-item" onclick="showPage('historique',this)">🗂️ Historique</div>
     </nav>
@@ -191,6 +195,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
       <button class="menu-btn" onclick="openSidebar()">☰</button>
       <div class="page-title" id="page-title">Tableau de bord</div>
       <button class="btn btn-primary" onclick="openModal('create')">+ Nouveau bon</button>
+      <button id="notif-btn" onclick="demanderPermissionNotifs()" title="Activer les notifications" style="background:none;border:1px solid var(--border);border-radius:8px;padding:7px 10px;cursor:pointer;font-size:16px">🔔</button>
       <div class="topbar-user" onclick="doLogout()" title="Se déconnecter">
         <div style="width:30px;height:30px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700" id="topbar-avatar">?</div>
         <div style="display:flex;flex-direction:column">
@@ -292,6 +297,38 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           <div class="card" style="padding:18px 20px"><div style="font-weight:700;font-size:14px;margin-bottom:18px">Par catégorie</div><div id="stats-cats"></div></div>
           <div class="card" style="padding:18px 20px"><div style="font-weight:700;font-size:14px;margin-bottom:18px">Par technicien</div><div id="stats-techs"></div></div>
         </div>
+      </div>
+
+      <!-- CARTE -->
+      <div class="page" id="page-carte">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-size:13px;color:var(--text2)">Localisation de vos résidences et bons actifs</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#DC0D4D;border-radius:50%;display:inline-block"></span>Urgence</span>
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#E65100;border-radius:50%;display:inline-block"></span>En cours</span>
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#183960;border-radius:50%;display:inline-block"></span>Normal</span>
+          </div>
+        </div>
+        <div class="card" style="overflow:hidden">
+          <div id="map" style="height:500px;width:100%;z-index:1"></div>
+        </div>
+        <div style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px" id="carte-batiments-list"></div>
+      </div>
+
+      <!-- CARTE -->
+      <div class="page" id="page-carte">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:13px;color:var(--text2)">Localisation de vos résidences et interventions actives</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:#DC0D4D;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.3)"></span>Urgence</span>
+            <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:#E65100;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.3)"></span>En cours</span>
+            <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:#183960;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.3)"></span>Normal</span>
+          </div>
+        </div>
+        <div class="card" style="overflow:hidden;margin-bottom:16px">
+          <div id="map" style="height:480px;width:100%"></div>
+        </div>
+        <div id="carte-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"></div>
       </div>
 
       <!-- HISTORIQUE -->
@@ -738,7 +775,7 @@ async function init(){
 
 async function loadBons(){
   const {data}=await sb.from('bons_travail').select('*,batiments(nom),techniciens(nom,prenom,telephone)').order('created_at',{ascending:false})
-  if(data) allBons=data
+  if(data){ checkNouveauxBons(data);allBons=data }
   updateUrgentBadge()
 }
 async function loadTechs(){
@@ -922,6 +959,11 @@ async function changeTech(technicien_id){
   await sb.from('bons_travail').update({technicien_id:technicien_id||null}).eq('id',currentBonId)
   await loadBons();renderDashboard()
   showToast('Technicien mis à jour !')
+  if(technicien_id){
+    const tech=allTechs.find(t=>t.id===technicien_id)
+    const bon=allBons.find(b=>b.id===currentBonId)
+    if(tech&&bon) notifierAssignation(bon,tech.prenom+' '+tech.nom)
+  }
 }
 
 async function addComment(){
@@ -1256,6 +1298,11 @@ async function createBon(){
     document.getElementById('f-titre').value='';document.getElementById('f-desc').value=''
     document.getElementById('f-photos-preview').innerHTML='';createPhotoFiles=[]
     await loadBons();await loadBonPhotos();renderDashboard();renderBonsTable()
+    // Notifier si technicien assigné
+    if(payload.technicien_id){
+      const tech=allTechs.find(t=>t.id===payload.technicien_id)
+      if(tech&&newBon) notifierAssignation(newBon,tech.prenom+' '+tech.nom)
+    }
   } else showToast('Erreur: '+error.message,'error')
 }
 
@@ -1496,6 +1543,149 @@ function openSidebar(){document.getElementById('sidebar').classList.add('open');
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
 function showToast(msg,type='success'){const t=document.createElement('div');t.className='toast'+(type==='error'?' error':'');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}
 function setMobileNav(el){document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'));el.classList.add('active')}
+
+
+// ── CARTE LEAFLET ──
+let mapInstance=null
+
+async function initCarte(){
+  if(!window.L){showToast('Chargement de la carte…');return}
+  if(mapInstance){mapInstance.remove();mapInstance=null}
+
+  // Géocoder les bâtiments et afficher
+  const container=document.getElementById('map')
+  if(!container) return
+
+  // Centre France par défaut
+  mapInstance=L.map('map').setView([44.5,0.5],6)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OpenStreetMap',maxZoom:19
+  }).addTo(mapInstance)
+
+  const bounds=[]
+  const carteList=document.getElementById('carte-list')
+  if(carteList) carteList.innerHTML=''
+
+  for(const b of allBats){
+    if(!b.adresse||!b.ville) continue
+    try{
+      const addr=encodeURIComponent(b.adresse+', '+b.ville+', France')
+      const resp=await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+addr+'&limit=1')
+      const data=await resp.json()
+      if(!data||data.length===0) continue
+      const lat=parseFloat(data[0].lat)
+      const lng=parseFloat(data[0].lon)
+      bounds.push([lat,lng])
+
+      const bons=allBons.filter(x=>x.batiment_id===b.id&&x.statut!=='termine'&&x.statut!=='annule')
+      const urgents=bons.filter(x=>x.priorite==='urgence').length
+      const enCours=bons.filter(x=>x.statut==='en_cours').length
+      const color=urgents>0?'#DC0D4D':enCours>0?'#E65100':'#183960'
+
+      // Marqueur personnalisé
+      const icon=L.divIcon({
+        className:'',
+        html:'<div style="background:'+color+';width:32px;height:32px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px">'+bons.length+'</div>',
+        iconSize:[32,32],iconAnchor:[16,16]
+      })
+
+      const marker=L.marker([lat,lng],{icon}).addTo(mapInstance)
+      const popupContent='<div style="font-family:sans-serif;min-width:180px">'
+        +'<div style="font-weight:700;font-size:14px;margin-bottom:6px">'+b.nom+'</div>'
+        +'<div style="font-size:12px;color:#666;margin-bottom:8px">'+b.adresse+', '+b.ville+'</div>'
+        +(urgents>0?'<div style="color:#DC0D4D;font-size:12px;font-weight:600">🔴 '+urgents+' urgence(s)</div>':'')
+        +(enCours>0?'<div style="color:#E65100;font-size:12px">⚙️ '+enCours+' en cours</div>':'')
+        +'<div style="color:#183960;font-size:12px">📋 '+bons.length+' bon(s) actif(s)</div>'
+        +(b.contact_nom?'<div style="font-size:12px;margin-top:6px;padding-top:6px;border-top:1px solid #eee">👤 '+b.contact_nom+(b.contact_telephone?' — <a href="tel:'+b.contact_telephone+'">📞</a>':'')+'</div>':'')
+        +'</div>'
+      marker.bindPopup(popupContent)
+      b._lat=lat;b._lng=lng
+
+      // Mini carte dans la liste
+      if(carteList){
+        const div=document.createElement('div')
+        div.className='card'
+        div.style.cssText='padding:12px 14px;cursor:pointer'
+        div.onclick=()=>{ mapInstance.setView([lat,lng],15);marker.openPopup() }
+        div.innerHTML='<div style="display:flex;align-items:center;gap:8px">'
+          +'<div style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0"></div>'
+          +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+b.nom+'</div>'
+          +'<div style="font-size:11px;color:var(--text3)">'+b.ville+' · '+bons.length+' bons</div></div></div>'
+        carteList.appendChild(div)
+      }
+    }catch(e){ console.warn('Geocode error for '+b.nom,e) }
+  }
+
+  if(bounds.length>0) mapInstance.fitBounds(bounds,{padding:[40,40]})
+  else showToast('Ajoutez des bâtiments avec adresse pour les voir sur la carte','error')
+}
+
+// ── NOTIFICATIONS PUSH ──
+let notifPermission='default'
+
+async function demanderPermissionNotifs(){
+  if(!('Notification' in window)){
+    showToast('Notifications non supportées sur ce navigateur','error');return
+  }
+  const perm=await Notification.requestPermission()
+  notifPermission=perm
+  if(perm==='granted'){
+    showToast('✅ Notifications activées !')
+    sauvegarderNotifToken()
+  } else {
+    showToast('Notifications refusées','error')
+  }
+}
+
+function sauvegarderNotifToken(){
+  // Stocker dans Supabase que cet utilisateur veut les notifications
+  // On utilise le user_id de la session
+  sb.auth.getUser().then(({data:{user}})=>{
+    if(user){
+      localStorage.setItem('domofrance_notif_'+user.id,'granted')
+    }
+  })
+}
+
+function envoyerNotifLocale(titre,corps,icone){
+  if(Notification.permission!=='granted') return
+  try{
+    new Notification(titre,{
+      body:corps,
+      icon:icone||'/icon-192.png',
+      badge:'/icon-192.png',
+      tag:'domofrance-'+Date.now(),
+      requireInteraction:false
+    })
+  }catch(e){ console.warn('Notif error:',e) }
+}
+
+// Observer les nouveaux bons pour notifier
+let lastBonCount=0
+function checkNouveauxBons(bons){
+  if(lastBonCount===0){lastBonCount=bons.length;return}
+  const nouveaux=bons.filter(b=>{
+    const age=(new Date()-new Date(b.created_at))/(1000*60)
+    return age<2 // créé il y a moins de 2 minutes
+  })
+  nouveaux.forEach(b=>{
+    envoyerNotifLocale(
+      '🔔 Nouveau bon de travail',
+      '#'+b.numero+' — '+b.titre+(b.batiments?' — '+b.batiments.nom:''),
+      '/icon-192.png'
+    )
+  })
+  lastBonCount=bons.length
+}
+
+// Notifier quand un bon est assigné à quelqu'un
+function notifierAssignation(bon,techNom){
+  envoyerNotifLocale(
+    '👷 Bon assigné à '+techNom,
+    '#'+bon.numero+' — '+bon.titre,
+    '/icon-192.png'
+  )
+}
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
 
@@ -1816,7 +2006,7 @@ function showPage(name,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
   document.getElementById('page-'+name).classList.add('active')
-  const pageTitles2={dashboard:'Tableau de bord',bons:'Bons de travail',planning:'Planning',techniciens:'Techniciens',batiments:'Bâtiments',stats:'Statistiques',historique:'Historique'}
+  const pageTitles2={dashboard:'Tableau de bord',bons:'Bons de travail',planning:'Planning',techniciens:'Techniciens',batiments:'Bâtiments',stats:'Statistiques',historique:'Historique',carte:'Carte des bâtiments'}
   document.getElementById('page-title').textContent=pageTitles2[name]||name
   if(el) el.classList.add('active')
   closeSidebar()
@@ -1825,6 +2015,8 @@ function showPage(name,el){
   if(name==='batiments') renderBatiments()
   if(name==='stats') renderStats()
   if(name==='historique') renderHistorique()
+  if(name==='carte') setTimeout(initCarte,100)
+  if(name==='carte') setTimeout(initCarte,100)
 }
 
 // Ajouter bouton récurrence dans topbar bons
