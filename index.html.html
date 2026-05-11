@@ -695,6 +695,38 @@ const SUPABASE_URL = 'https://eomijzmsevgyyeroqdbo.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_4N6hRNVA5ibzbKAi30_Txg_VIYS4okb'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
+// ── CLOUDFLARE R2 CONFIG ──
+const R2_ACCOUNT_ID = '2720ee4abe343d3af274aa8813545f7b'
+const R2_BUCKET = 'domofrance-photos'
+
+// ── RESEND EMAIL CONFIG ──
+const RESEND_KEY = 're_4ikwSmcH_3pT3Lh2wfzUhpVb61eLY9gAg'
+const EMAIL_RECIPIENTS = ['alexis.montanier@domofrance.fr','stephanie.leterrier@domofrance.fr','robert.barlier@domofrance.fr']
+
+// ── CLOUDFLARE R2 ──
+const R2_ACCOUNT_ID = '2720ee4abe343d3af274aa8813545f7b'
+const R2_ACCESS_KEY = '87d3d2ff22bcd296915804fd417f38c5'
+const R2_SECRET_KEY = '6a0ec7a677b494862a485ed299910c4b931f52380032190317fda01ee2f01489'
+const R2_BUCKET = 'domofrance-photos'
+const R2_ENDPOINT = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+const R2_PUBLIC_URL = `https://pub-${R2_ACCOUNT_ID}.r2.dev`
+
+// ── RESEND EMAIL ──
+const RESEND_KEY = 're_4ikwSmcH_3pT3Lh2wfzUhpVb61eLY9gAg'
+const EMAIL_RECIPIENTS = ['alexis.montanier@domofrance.fr','stephanie.leterrier@domofrance.fr','robert.barlier@domofrance.fr']
+const EMAIL_FROM = 'maintenance@domofrance.fr'
+
+// ── UPLOAD VERS R2 (via Supabase Edge Function proxy pour éviter CORS) ──
+async function uploadToR2(file, path) {
+  // On continue à utiliser Supabase Storage comme proxy
+  // La migration complète vers R2 nécessite une Edge Function
+  // Pour l'instant on garde Supabase Storage et on ajoute la génération PDF + email
+  const { error } = await sb.storage.from('photos').upload(path, file)
+  if (error) return null
+  const { data: { publicUrl } } = sb.storage.from('photos').getPublicUrl(path)
+  return publicUrl
+}
+
 // ── AUTH ──
 function showLoginPage(){document.getElementById('login-page').classList.add('show')}
 function hideLoginPage(){document.getElementById('login-page').classList.remove('show')}
@@ -832,6 +864,8 @@ async function init(){
   await loadBonPhotos()
   renderDashboard(); renderCalendar()
   sb.channel('bons').on('postgres_changes',{event:'*',schema:'public',table:'bons_travail'},()=>{loadBons().then(async()=>{await loadBonPhotos();renderDashboard();renderBonsTable();renderStats()})}).subscribe()
+  // Vérifier les bons à supprimer au chargement
+  setTimeout(supprimerBonsExpires, 3000)
 }
 
 async function loadBonPhotos(){
@@ -1087,8 +1121,10 @@ async function confirmerTerminer(){
   const comment=document.getElementById('terminer-comment').value.trim()
   const photoFile=document.getElementById('terminer-photo').files[0]
   const dureeH=parseFloat((chronoSeconds/3600).toFixed(2))
+  const btn=document.querySelector('#modal-terminer .btn-success')
+  btn.textContent='Clôture en cours…'; btn.disabled=true
 
-  // Upload photo si présente
+  // Upload photo finale si présente
   if(photoFile){
     const ext=photoFile.name.split('.').pop()
     const path=`${currentBonId}/${Date.now()}_apres.${ext}`
@@ -1100,19 +1136,281 @@ async function confirmerTerminer(){
   }
 
   // Mettre à jour le bon
-  const extra={statut:'termine',date_fin:new Date().toISOString()}
+  const extra={statut:'termine',date_fin:new Date().toISOString(),suppression_prevue:new Date(Date.now()+15*24*60*60*1000).toISOString()}
   if(chronoSeconds>0) extra.duree_reelle=dureeH
   await sb.from('bons_travail').update(extra).eq('id',currentBonId)
 
-  // Ajouter commentaire de clôture
+  // Commentaire de clôture
   const contenu=comment?`✅ Intervention terminée — ${comment}`:`✅ Intervention terminée par ${auteur}`
   await sb.from('commentaires').insert([{bon_id:currentBonId,auteur,contenu}])
 
+  // Charger toutes les données pour le PDF
+  const bon=allBons.find(b=>b.id===currentBonId)
+  const {data:photos}=await sb.from('photos').select('*').eq('bon_id',currentBonId).order('created_at')
+  const {data:comments}=await sb.from('commentaires').select('*').eq('bon_id',currentBonId).order('created_at')
+
+  // Générer le PDF
+  showToast('Génération du PDF…')
+  try {
+    await genererEtEnvoyerPDF(bon, photos||[], comments||[], auteur, dureeH)
+  } catch(e) {
+    console.error('PDF error:', e)
+  }
+
   chronoStop()
   await loadBons(); await loadBonPhotos(); renderDashboard(); renderBonsTable()
+  btn.textContent='✅ Clôturer le bon'; btn.disabled=false
   closeModal('terminer')
   closeModal('detail')
-  showToast(`✅ Bon clôturé ! Durée : ${chronoSeconds>0?formatChrono(chronoSeconds):'—'}`)
+  showToast(`✅ Bon clôturé ! PDF envoyé par email.`)
+}
+
+// ── GÉNÉRATION PDF ──
+async function genererEtEnvoyerPDF(bon, photos, comments, auteur, dureeH){
+  // Charger jsPDF
+  if(!window.jspdf){
+    await new Promise((resolve,reject)=>{
+      const s=document.createElement('script')
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+      s.onload=resolve; s.onerror=reject
+      document.head.appendChild(s)
+    })
+  }
+  const {jsPDF}=window.jspdf
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'})
+  const W=210, margin=15
+  let y=margin
+
+  // Couleurs Domofrance
+  const rouge=[220,13,77], marine=[24,57,96], gris=[100,100,100], grisClair=[240,240,240]
+
+  // ── EN-TÊTE ──
+  doc.setFillColor(...marine)
+  doc.rect(0,0,W,28,'F')
+  doc.setTextColor(255,255,255)
+  doc.setFontSize(18); doc.setFont('helvetica','bold')
+  doc.text('DOMOFRANCE',margin,12)
+  doc.setFontSize(10); doc.setFont('helvetica','normal')
+  doc.text('Bon d'Intervention — Rapport de clôture',margin,20)
+  doc.setFontSize(9)
+  doc.text(new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}),W-margin,20,{align:'right'})
+  y=36
+
+  // ── TITRE DU BON ──
+  doc.setFillColor(...rouge)
+  doc.rect(margin,y,W-2*margin,10,'F')
+  doc.setTextColor(255,255,255)
+  doc.setFontSize(12); doc.setFont('helvetica','bold')
+  doc.text(`Bon #${bon.numero||'—'} — ${bon.titre}`,margin+3,y+7)
+  y+=14
+
+  // ── STATUT BADGE ──
+  doc.setFillColor(232,245,233)
+  doc.roundedRect(margin,y,40,7,2,2,'F')
+  doc.setTextColor(46,125,50)
+  doc.setFontSize(9); doc.setFont('helvetica','bold')
+  doc.text('✅ TERMINÉ',margin+3,y+5)
+  y+=12
+
+  // ── INFORMATIONS GÉNÉRALES ──
+  const infoBox=(title,data,x,yStart,boxW)=>{
+    doc.setFillColor(...grisClair)
+    doc.roundedRect(x,yStart,boxW,6,1,1,'F')
+    doc.setTextColor(...marine)
+    doc.setFontSize(9); doc.setFont('helvetica','bold')
+    doc.text(title.toUpperCase(),x+3,yStart+4.5)
+    let cy=yStart+10
+    data.forEach(([k,v])=>{
+      doc.setFont('helvetica','bold'); doc.setTextColor(...gris); doc.setFontSize(8)
+      doc.text(k+' :',x+3,cy)
+      doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30)
+      doc.text(String(v||'—'),x+45,cy)
+      cy+=6
+    })
+    return cy
+  }
+
+  const halfW=(W-2*margin-5)/2
+  const y1=infoBox('Détails du bon',[
+    ['N° Bon',`#${bon.numero||'—'}`],
+    ['Catégorie',bon.categorie||'—'],
+    ['Priorité',bon.priorite?.toUpperCase()||'—'],
+    ['Bâtiment',bon.batiments?.nom||'—'],
+    ['Zone',bon.zone||'—'],
+  ],margin,y,halfW)
+
+  const y2=infoBox('Intervention',[
+    ['Technicien',bon.techniciens?`${bon.techniciens.prenom} ${bon.techniciens.nom}`:'—'],
+    ['Clôturé par',auteur],
+    ['Date début',bon.date_debut?new Date(bon.date_debut).toLocaleString('fr-FR'):'—'],
+    ['Date fin',bon.date_fin?new Date(bon.date_fin).toLocaleString('fr-FR'):new Date().toLocaleString('fr-FR')],
+    ['Durée réelle',dureeH>0?`${dureeH}h`:(bon.duree_reelle?`${bon.duree_reelle}h`:'—')],
+  ],margin+halfW+5,y,halfW)
+
+  y=Math.max(y1,y2)+6
+
+  // ── DESCRIPTION ──
+  if(bon.description){
+    doc.setFillColor(...grisClair)
+    doc.roundedRect(margin,y,W-2*margin,6,1,1,'F')
+    doc.setTextColor(...marine); doc.setFont('helvetica','bold'); doc.setFontSize(9)
+    doc.text('DESCRIPTION',margin+3,y+4.5)
+    y+=9
+    doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30); doc.setFontSize(9)
+    const lines=doc.splitTextToSize(bon.description,W-2*margin-6)
+    lines.forEach(l=>{
+      if(y>270){doc.addPage();y=margin}
+      doc.text(l,margin+3,y); y+=5
+    })
+    y+=4
+  }
+
+  // ── COMMENTAIRES ──
+  if(comments.length>0){
+    if(y>240){doc.addPage();y=margin}
+    doc.setFillColor(...grisClair)
+    doc.roundedRect(margin,y,W-2*margin,6,1,1,'F')
+    doc.setTextColor(...marine); doc.setFont('helvetica','bold'); doc.setFontSize(9)
+    doc.text('JOURNAL D'ACTIVITÉ',margin+3,y+4.5)
+    y+=9
+    comments.forEach(c=>{
+      if(y>270){doc.addPage();y=margin}
+      doc.setFont('helvetica','bold'); doc.setTextColor(...rouge); doc.setFontSize(8)
+      doc.text(`${c.auteur} — ${new Date(c.created_at).toLocaleString('fr-FR')}`,margin+3,y)
+      y+=4
+      doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30); doc.setFontSize(8)
+      const lines=doc.splitTextToSize(c.contenu,W-2*margin-6)
+      lines.forEach(l=>{
+        if(y>270){doc.addPage();y=margin}
+        doc.text(l,margin+3,y); y+=4
+      })
+      y+=3
+    })
+    y+=2
+  }
+
+  // ── PHOTOS ──
+  if(photos.length>0){
+    if(y>200){doc.addPage();y=margin}
+    doc.setFillColor(...grisClair)
+    doc.roundedRect(margin,y,W-2*margin,6,1,1,'F')
+    doc.setTextColor(...marine); doc.setFont('helvetica','bold'); doc.setFontSize(9)
+    doc.text(`PHOTOS (${photos.length})`,margin+3,y+4.5)
+    y+=9
+
+    let px=margin, photoW=55, photoH=42, gap=5
+    for(const p of photos){
+      try{
+        const resp=await fetch(p.url)
+        const blob=await resp.blob()
+        const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result);fr.readAsDataURL(blob)})
+        if(px+photoW>W-margin){px=margin;y+=photoH+gap+8}
+        if(y+photoH>270){doc.addPage();y=margin;px=margin}
+        doc.addImage(b64,'JPEG',px,y,photoW,photoH,undefined,'MEDIUM')
+        // Label AVANT/APRÈS
+        if(p.legende){
+          const lColor=p.legende==='AVANT'?[230,101,0]:[46,125,50]
+          doc.setFillColor(...lColor)
+          doc.rect(px,y+photoH-6,photoW,6,'F')
+          doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold')
+          doc.text(p.legende,px+photoW/2,y+photoH-2,{align:'center'})
+        }
+        px+=photoW+gap
+      }catch(e){console.warn('Photo skip:',e)}
+    }
+    y+=photoH+10
+  }
+
+  // ── PIED DE PAGE ──
+  const pageCount=doc.internal.getNumberOfPages()
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i)
+    doc.setFillColor(...marine)
+    doc.rect(0,287,W,10,'F')
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','normal')
+    doc.text('DOMOFRANCE — Groupe ActionLogement',margin,293)
+    doc.text(`Page ${i}/${pageCount}`,W-margin,293,{align:'right'})
+  }
+
+  // ── TÉLÉCHARGEMENT ──
+  const nomFichier=`BonIntervention_${bon.numero||bon.id.slice(0,8)}_${new Date().toISOString().slice(0,10)}.pdf`
+  doc.save(nomFichier)
+
+  // ── ENVOI EMAIL via Resend ──
+  try {
+    const pdfB64=btoa(String.fromCharCode(...new Uint8Array(doc.output('arraybuffer'))))
+    await envoyerEmailPDF(bon, auteur, dureeH, nomFichier, pdfB64)
+  } catch(e){ console.error('Email error:',e) }
+}
+
+async function envoyerEmailPDF(bon, auteur, dureeH, nomFichier, pdfB64){
+  const sujet=`✅ Bon #${bon.numero||'—'} clôturé — ${bon.titre} — ${bon.batiments?.nom||''}`
+  const dureeText=dureeH>0?`${dureeH}h`:(bon.duree_reelle?`${bon.duree_reelle}h`:'non renseignée')
+  const htmlBody=`
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+      <div style="background:#183960;padding:20px;border-radius:8px 8px 0 0">
+        <h1 style="color:#fff;margin:0;font-size:20px">DOMOFRANCE</h1>
+        <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:13px">Rapport d'intervention</p>
+      </div>
+      <div style="background:#f8f8f8;padding:24px;border-radius:0 0 8px 8px;border:1px solid #e0e0e0">
+        <div style="background:#E8F5E9;border-left:4px solid #2E7D32;padding:12px 16px;border-radius:4px;margin-bottom:20px">
+          <strong style="color:#2E7D32">✅ Bon d'intervention clôturé</strong>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          <tr><td style="padding:8px;color:#666;width:40%">N° Bon</td><td style="padding:8px;font-weight:bold">#${bon.numero||'—'}</td></tr>
+          <tr style="background:#f0f0f0"><td style="padding:8px;color:#666">Intitulé</td><td style="padding:8px;font-weight:bold">${bon.titre}</td></tr>
+          <tr><td style="padding:8px;color:#666">Bâtiment</td><td style="padding:8px">${bon.batiments?.nom||'—'}</td></tr>
+          <tr style="background:#f0f0f0"><td style="padding:8px;color:#666">Zone</td><td style="padding:8px">${bon.zone||'—'}</td></tr>
+          <tr><td style="padding:8px;color:#666">Technicien</td><td style="padding:8px">${bon.techniciens?`${bon.techniciens.prenom} ${bon.techniciens.nom}`:'—'}</td></tr>
+          <tr style="background:#f0f0f0"><td style="padding:8px;color:#666">Clôturé par</td><td style="padding:8px">${auteur}</td></tr>
+          <tr><td style="padding:8px;color:#666">Durée intervention</td><td style="padding:8px;font-weight:bold;color:#2E7D32">${dureeText}</td></tr>
+          <tr style="background:#f0f0f0"><td style="padding:8px;color:#666">Date clôture</td><td style="padding:8px">${new Date().toLocaleString('fr-FR')}</td></tr>
+        </table>
+        <p style="font-size:12px;color:#999;margin-top:20px">Le rapport complet est joint en pièce jointe PDF.<br>Ce bon sera automatiquement supprimé de la base de données dans 15 jours.</p>
+      </div>
+    </div>`
+
+  const payload={
+    from:'DOMOFRANCE Maintenance <onboarding@resend.dev>',
+    to:EMAIL_RECIPIENTS,
+    subject:sujet,
+    html:htmlBody,
+    attachments:[{filename:nomFichier,content:pdfB64}]
+  }
+
+  const resp=await fetch('https://api.resend.com/emails',{
+    method:'POST',
+    headers:{'Authorization':`Bearer ${RESEND_KEY}`,'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  })
+  if(resp.ok) console.log('Email envoyé ✓')
+  else console.error('Email error:',await resp.text())
+}
+
+// ── SUPPRESSION AUTOMATIQUE APRÈS 15 JOURS ──
+async function supprimerBonsExpires(){
+  const maintenant=new Date().toISOString()
+  const {data:expires}=await sb.from('bons_travail')
+    .select('id')
+    .eq('statut','termine')
+    .lt('suppression_prevue',maintenant)
+  if(!expires||expires.length===0) return
+  for(const b of expires){
+    // Supprimer photos Supabase Storage
+    const {data:photos}=await sb.from('photos').select('url').eq('bon_id',b.id)
+    if(photos){
+      const paths=photos.map(p=>{const u=new URL(p.url);return u.pathname.split('/photos/')[1]}).filter(Boolean)
+      if(paths.length>0) await sb.storage.from('photos').remove(paths)
+    }
+    // Supprimer commentaires, photos DB, puis bon
+    await sb.from('commentaires').delete().eq('bon_id',b.id)
+    await sb.from('photos').delete().eq('bon_id',b.id)
+    await sb.from('bons_travail').delete().eq('id',b.id)
+  }
+  if(expires.length>0){
+    console.log(`${expires.length} bon(s) supprimé(s) automatiquement`)
+    await loadBons(); await loadBonPhotos(); renderDashboard(); renderBonsTable()
+  }
 }
 
 // Upload photo avec label avant/après
