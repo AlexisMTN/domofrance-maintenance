@@ -695,37 +695,9 @@ const SUPABASE_URL = 'https://eomijzmsevgyyeroqdbo.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_4N6hRNVA5ibzbKAi30_Txg_VIYS4okb'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-// ── CLOUDFLARE R2 CONFIG ──
-const R2_ACCOUNT_ID = '2720ee4abe343d3af274aa8813545f7b'
-const R2_BUCKET = 'domofrance-photos'
-
-// ── RESEND EMAIL CONFIG ──
-const RESEND_KEY = 're_4ikwSmcH_3pT3Lh2wfzUhpVb61eLY9gAg'
-const EMAIL_RECIPIENTS = ['alexis.montanier@domofrance.fr','stephanie.leterrier@domofrance.fr','robert.barlier@domofrance.fr']
-
-// ── CLOUDFLARE R2 ──
-const R2_ACCOUNT_ID = '2720ee4abe343d3af274aa8813545f7b'
-const R2_ACCESS_KEY = '87d3d2ff22bcd296915804fd417f38c5'
-const R2_SECRET_KEY = '6a0ec7a677b494862a485ed299910c4b931f52380032190317fda01ee2f01489'
-const R2_BUCKET = 'domofrance-photos'
-const R2_ENDPOINT = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
-const R2_PUBLIC_URL = `https://pub-${R2_ACCOUNT_ID}.r2.dev`
-
 // ── RESEND EMAIL ──
 const RESEND_KEY = 're_4ikwSmcH_3pT3Lh2wfzUhpVb61eLY9gAg'
 const EMAIL_RECIPIENTS = ['alexis.montanier@domofrance.fr','stephanie.leterrier@domofrance.fr','robert.barlier@domofrance.fr']
-const EMAIL_FROM = 'maintenance@domofrance.fr'
-
-// ── UPLOAD VERS R2 (via Supabase Edge Function proxy pour éviter CORS) ──
-async function uploadToR2(file, path) {
-  // On continue à utiliser Supabase Storage comme proxy
-  // La migration complète vers R2 nécessite une Edge Function
-  // Pour l'instant on garde Supabase Storage et on ajoute la génération PDF + email
-  const { error } = await sb.storage.from('photos').upload(path, file)
-  if (error) return null
-  const { data: { publicUrl } } = sb.storage.from('photos').getPublicUrl(path)
-  return publicUrl
-}
 
 // ── AUTH ──
 function showLoginPage(){document.getElementById('login-page').classList.add('show')}
