@@ -268,7 +268,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           <button class="filter-tab" onclick="filterBons('en_cours',this)">⚙️ En cours</button>
           <button class="filter-tab" onclick="filterBons('en_attente',this)">⏸️ En attente</button>
           <button class="filter-tab" onclick="filterBons('planifie',this)">📅 Planifié</button>
-          <button class="filter-tab" onclick="filterBons('termine',this)">✅ Terminé</button>
+          <button class="filter-tab" onclick="showPage('historique',document.querySelectorAll('.nav-item')[6])">🗂️ Voir l'historique →</button>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
           <select id="filter-bat" class="form-select" style="width:200px" onchange="renderBonsTable()">
@@ -895,7 +895,7 @@ function renderDashboard(){
   document.getElementById('stat-termines').textContent=allBons.filter(b=>b.statut==='termine').length
   const sc={disponible:'#66BB6A',en_intervention:'#FFA726',hors_service:'#B0BEC5'}
   const sl={disponible:'Disponible',en_intervention:'En intervention',hors_service:'Hors service'}
-  document.getElementById('dash-bons').innerHTML=allBons.slice(0,6).map(b=>{
+  document.getElementById('dash-bons').innerHTML=allBons.filter(b=>b.statut!=='termine'&&b.statut!=='annule').slice(0,6).map(b=>{
     const col=b.priorite==='urgence'?'#DC0D4D':b.priorite==='haute'?'#E65100':b.statut==='en_cours'?'#FFA726':b.statut==='termine'?'#66BB6A':b.statut==='en_attente'?'#F9A825':b.statut==='planifie'?'#42A5F5':'#90A4AE'
     return '<div onclick="openDetail(\''+b.id+'\')" style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--gray2);cursor:pointer" onmouseover="this.style.background=\'var(--gray)\'" onmouseout="this.style.background=\'\'">'
     +'<div style="width:9px;height:9px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'
@@ -1863,6 +1863,8 @@ function renderBonsTable(){
   const search=(document.getElementById('search-input')?.value||'').toLowerCase()
   const batFilter=document.getElementById('filter-bat')?.value||''
   const filtered=allBons.filter(b=>{
+    // Exclure toujours les bons terminés/annulés de la liste principale
+    if(b.statut==='termine'||b.statut==='annule') return false
     const mf=currentFilter==='all'||(currentFilter==='urgence'&&b.priorite==='urgence')||b.statut===currentFilter
     const ms=!search||b.titre.toLowerCase().includes(search)||(b.batiments?.nom||'').toLowerCase().includes(search)
     const mb=!batFilter||b.batiment_id===batFilter
@@ -1927,6 +1929,8 @@ function doExport(){
   const batFilter=document.getElementById('filter-bat')?.value||''
   const search=(document.getElementById('search-input')?.value||'').toLowerCase()
   const filtered=allBons.filter(b=>{
+    // Exclure toujours les bons terminés/annulés de la liste principale
+    if(b.statut==='termine'||b.statut==='annule') return false
     const mf=currentFilter==='all'||(currentFilter==='urgence'&&b.priorite==='urgence')||b.statut===currentFilter
     const ms=!search||b.titre.toLowerCase().includes(search)||(b.batiments?.nom||'').toLowerCase().includes(search)
     const mb=!batFilter||b.batiment_id===batFilter
