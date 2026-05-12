@@ -190,6 +190,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
       <div class="nav-section">Principal</div>
       <div class="nav-item active" onclick="showPage('dashboard',this)">📊 Tableau de bord</div>
       <div class="nav-item" onclick="showPage('bons',this)">📋 Bons de travail <span class="nav-badge" id="urgent-badge" style="display:none">0</span></div>
+      <div class="nav-item" onclick="showPage('mes-tickets',this)">👤 Mes tickets</div>
+      <div class="nav-item" onclick="showPage('mes-tickets',this)">👤 Mes tickets</div>
       <div class="nav-item" onclick="showPage('planning',this)">📅 Planning</div>
       <div class="nav-item" onclick="showPage('controle',this)">🛡️ Contrôle Réglementaire</div>
       <div class="nav-section">Gestion</div>
@@ -289,6 +291,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           </div>
           <div id="cal-grid"></div>
         </div>
+      </div>
+
+      <!-- MES TICKETS -->
+      <div class="page" id="page-mes-tickets">
+        <div id="mes-tickets-content"></div>
       </div>
 
       <!-- CONTROLE REGLEMENTAIRE -->
@@ -391,6 +398,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
   <button class="mobile-nav-item active" onclick="showPage('dashboard',this);setMobileNav(this)"><span>📊</span>Accueil</button>
   <button class="mobile-nav-item" onclick="showPage('bons',this);setMobileNav(this)"><span>📋</span>Bons</button>
   <button class="mobile-nav-item" onclick="openModal('create')"><span style="background:var(--blue);color:#fff;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:2px">+</span>Créer</button>
+  <button class="mobile-nav-item" onclick="showPage('mes-tickets',this);setMobileNav(this)"><span>👤</span>Mes tickets</button>
   <button class="mobile-nav-item" onclick="showPage('techniciens',this);setMobileNav(this)"><span>👷</span>Équipe</button>
   <button class="mobile-nav-item" onclick="showPage('batiments',this);setMobileNav(this)"><span>🏢</span>Sites</button>
 </nav>
@@ -2484,7 +2492,7 @@ function showPage(name, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
   document.getElementById('page-'+name)?.classList.add('active')
-  const pt={dashboard:'Tableau de bord',bons:'Bons de travail',planning:'Planning',controle:'Contrôle Réglementaire',techniciens:'Techniciens',batiments:'Bâtiments',stats:'Statistiques',historique:'Historique',carte:'Carte des bâtiments'}
+  const pt={dashboard:'Tableau de bord',bons:'Bons de travail','mes-tickets':'Mes tickets',planning:'Planning',controle:'Contrôle Réglementaire',techniciens:'Techniciens',batiments:'Bâtiments',stats:'Statistiques',historique:'Historique',carte:'Carte des bâtiments'}
   document.getElementById('page-title').textContent=pt[name]||name
   if(el) el.classList.add('active')
   closeSidebar()
@@ -2494,6 +2502,8 @@ function showPage(name, el){
   if(name==='stats'){renderStats();setTimeout(renderStatsCouts,100)}
   if(name==='historique') renderHistorique()
   if(name==='carte') setTimeout(()=>{const m=document.getElementById('map');if(m)m.style.height='480px';initCarte()},200)
+  if(name==='mes-tickets') renderMesTickets()
+  if(name==='mes-tickets') renderMesTickets()
   if(name==='controle'){populateControleSelects();renderControles()}
 }
 
@@ -3143,6 +3153,83 @@ function demarrerOuReprendre(){
     ouvrirMission()
   }
 }
+
+// ── MES TICKETS ──
+async function renderMesTickets(){
+  const el = document.getElementById('mes-tickets-content')
+  if(!el) return
+  const {data:{user}} = await sb.auth.getUser()
+  if(!user){ el.innerHTML='<div style="color:var(--text3);padding:20px">Non connecté</div>'; return }
+  const tech = allTechs.find(t=>t.email===user.email)
+  let bonsEnCours, bonsEnAttente
+  if(tech){
+    bonsEnCours = allBons.filter(b=>b.technicien_id===tech.id && b.statut==='en_cours')
+    bonsEnAttente = allBons.filter(b=>b.technicien_id===tech.id && b.statut==='en_attente')
+  } else {
+    bonsEnCours = allBons.filter(b=>b.statut==='en_cours')
+    bonsEnAttente = allBons.filter(b=>b.statut==='en_attente')
+  }
+  const totalActifs = bonsEnCours.length + bonsEnAttente.length
+  const nom = tech ? tech.prenom+' '+tech.nom : user.email.split('@')[0]
+  const initiales = nom.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
+
+  let html = '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding:16px 20px;background:var(--navy);border-radius:12px">'
+    +'<div style="width:50px;height:50px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0">'+initiales+'</div>'
+    +'<div><div style="font-size:16px;font-weight:700;color:#fff">'+nom+'</div>'
+    +(tech?'<div style="font-size:12px;color:rgba(255,255,255,.6)">'+tech.specialite+'</div>':'')
+    +'</div><div style="margin-left:auto;text-align:right"><div style="font-size:24px;font-weight:700;color:#fff">'+totalActifs+'</div><div style="font-size:11px;color:rgba(255,255,255,.6)">mission(s) active(s)</div></div></div>'
+
+  if(bonsEnCours.length > 0){
+    html += '<div style="font-size:13px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">En cours ('+bonsEnCours.length+')</div>'
+    bonsEnCours.forEach(b=>{
+      const bat = allBats.find(x=>x.id===b.batiment_id)
+      const duree = b.date_debut ? Math.floor((new Date()-new Date(b.date_debut))/1000/60) : 0
+      const dureeText = duree < 60 ? duree+'min' : Math.floor(duree/60)+'h'+String(duree%60).padStart(2,'0')
+      html += '<div class="card" data-id="'+b.id+'" style="padding:0;overflow:hidden;margin-bottom:12px;border-left:4px solid var(--orange)">'
+        +'<div style="padding:14px 16px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+        +'<div style="cursor:pointer" data-bon-id="'+b.id+'" onclick="openDetail(this.getAttribute(\"data-bon-id\"))"><div style="font-size:14px;font-weight:700">'+b.titre+'</div>'
+        +'<div style="font-size:12px;color:var(--text3);margin-top:2px">'+(bat?'🏢 '+bat.nom+(b.zone?' - '+b.zone:''):'—')+'</div></div>'
+        +badge(b.priorite)
+        +'</div>'
+        +'<div style="display:flex;align-items:center;justify-content:space-between">'
+        +'<div style="font-size:12px;color:var(--text2)">En cours depuis <strong>'+dureeText+'</strong></div>'
+        +'<button class="btn btn-warning" style="font-size:11px;padding:5px 10px" onclick="ouvrirAttenteForBon(\''+b.id+'\')" >Pause</button>'
+        +'</div></div></div>'
+    })
+  }
+
+  if(bonsEnAttente.length > 0){
+    html += '<div style="font-size:13px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px">En attente ('+bonsEnAttente.length+')</div>'
+    bonsEnAttente.forEach(b=>{
+      const bat = allBats.find(x=>x.id===b.batiment_id)
+      html += '<div class="card" style="padding:0;overflow:hidden;margin-bottom:12px;border-left:4px solid var(--yellow)">'
+        +'<div style="padding:14px 16px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+        +'<div style="cursor:pointer" data-bon-id="'+b.id+'" onclick="openDetail(this.getAttribute(\"data-bon-id\"))"><div style="font-size:14px;font-weight:700">'+b.titre+'</div>'
+        +'<div style="font-size:12px;color:var(--text3);margin-top:2px">'+(bat?'🏢 '+bat.nom+(b.zone?' - '+b.zone:''):'—')+'</div></div>'
+        +'<span style="background:var(--yellow-light);color:var(--yellow);font-size:10px;font-weight:700;border-radius:6px;padding:3px 8px">En attente</span>'
+        +'</div>'
+        +'<div style="display:flex;align-items:center;justify-content:space-between">'
+        +'<div style="font-size:12px;color:var(--text2)">Mis à jour le '+new Date(b.updated_at||b.created_at).toLocaleDateString('fr-FR')+'</div>'
+        +'<button class="btn btn-orange" style="font-size:11px;padding:5px 10px" onclick="reprendreForBon(\''+b.id+'\')" >Reprendre</button>'
+        +'</div></div></div>'
+    })
+  }
+
+  if(totalActifs === 0){
+    html += '<div class="card" style="padding:40px;text-align:center">'
+      +'<div style="font-size:40px;margin-bottom:12px">✅</div>'
+      +'<div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:6px">Aucune mission active</div>'
+      +'<div style="font-size:13px;color:var(--text3)">Vous n\'avez pas de bon en cours ou en attente</div>'
+      +'</div>'
+  }
+
+  el.innerHTML = html
+}
+
+function ouvrirAttenteForBon(id){currentBonId=id;ouvrirAttente()}
+function reprendreForBon(id){currentBonId=id;reprendreIntervention()}
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
 
 // ── FILTRE PAR BATIMENT ──
