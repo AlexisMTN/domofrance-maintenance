@@ -169,24 +169,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
         <input type="password" class="form-input" id="login-password" placeholder="••••••••" style="font-size:15px;padding:11px 14px" onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <button class="login-btn" onclick="doLogin()" id="login-btn">Se connecter</button>
-      <div class="login-divider">ou</div>
-      <div class="register-link">Pas encore de compte ? <span onclick="showRegister()">Créer un compte</span></div>
-    </div>
-    <div id="register-form" style="display:none">
-      <div class="form-group">
-        <label class="form-label">Prénom &amp; Nom</label>
-        <input class="form-input" id="reg-name" placeholder="Pierre Dubois" style="font-size:15px;padding:11px 14px">
+      <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:16px">
+        Accès réservé — Pôle Immobilier et Environnement de Travail
       </div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-input" id="reg-email" placeholder="votre@email.fr" style="font-size:15px;padding:11px 14px">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Mot de passe</label>
-        <input type="password" class="form-input" id="reg-password" placeholder="Minimum 6 caractères" style="font-size:15px;padding:11px 14px">
-      </div>
-      <button class="login-btn" onclick="doRegister()" id="reg-btn">Créer mon compte</button>
-      <div class="register-link" style="margin-top:12px">Déjà un compte ? <span onclick="showLogin()">Se connecter</span></div>
     </div>
   </div>
 </div>
