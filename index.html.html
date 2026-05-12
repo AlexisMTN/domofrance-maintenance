@@ -355,7 +355,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           </div>
         </div>
         <div class="card" style="overflow:hidden;margin-bottom:16px">
-          <div id="map" style="height:480px;width:100%"></div>
+          <div id="map" style="height:480px;width:100%;min-height:480px"></div>
         </div>
         <div id="carte-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"></div>
       </div>
@@ -1621,43 +1621,40 @@ function setMobileNav(el){document.querySelectorAll('.mobile-nav-item').forEach(
 // ── CARTE LEAFLET ──
 let mapInstance=null
 
-// Cache géocodage en localStorage
+// Cache géocodage
 function getGeoCache(key){ try{const c=JSON.parse(localStorage.getItem('geo_'+key));if(c&&Date.now()-c.ts<30*24*60*60*1000)return c}catch(e){}return null }
 function setGeoCache(key,lat,lng){ try{localStorage.setItem('geo_'+key,JSON.stringify({lat,lng,ts:Date.now()}))}catch(e){} }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)) }
 
 async function geocodeAdresse(adresse,ville,cp){
-  const key=(adresse+cp+ville).replace(/\s+/g,'').toLowerCase()
+  const key=((adresse||'')+(cp||'')+(ville||'')).toLowerCase().replace(/[^a-z0-9]/g,'')
   const cached=getGeoCache(key)
   if(cached) return {lat:cached.lat,lng:cached.lng}
 
-  // Essai 1 : adresse complète
-  const addr1=encodeURIComponent(adresse+', '+(cp||'')+' '+ville+', France')
+  // API Adresse du gouvernement français - gratuite et sans limite
   try{
-    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+addr1+'&limit=1&countrycodes=fr',{headers:{'Accept-Language':'fr'}})
+    const q=encodeURIComponent((adresse||'')+' '+(cp||'')+' '+(ville||''))
+    const r=await fetch('https://api-adresse.data.gouv.fr/search/?q='+q+'&limit=1')
     const d=await r.json()
-    if(d&&d.length>0){
-      const lat=parseFloat(d[0].lat),lng=parseFloat(d[0].lon)
+    if(d&&d.features&&d.features.length>0){
+      const [lng,lat]=d.features[0].geometry.coordinates
       setGeoCache(key,lat,lng)
       return {lat,lng}
     }
-  }catch(e){}
+  }catch(e){ console.warn('API adresse error:',e) }
 
-  await sleep(1100)
+  // Fallback : ville + code postal uniquement
+  try{
+    const q2=encodeURIComponent((cp||'')+' '+(ville||''))
+    const r2=await fetch('https://api-adresse.data.gouv.fr/search/?q='+q2+'&type=municipality&limit=1')
+    const d2=await r2.json()
+    if(d2&&d2.features&&d2.features.length>0){
+      const [lng,lat]=d2.features[0].geometry.coordinates
+      setGeoCache(key,lat,lng)
+      return {lat,lng}
+    }
+  }catch(e){ console.warn('Fallback geocode error:',e) }
 
-  // Essai 2 : code postal + ville uniquement
-  if(cp||ville){
-    const addr2=encodeURIComponent((cp||'')+' '+ville+', France')
-    try{
-      const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+addr2+'&limit=1&countrycodes=fr',{headers:{'Accept-Language':'fr'}})
-      const d=await r.json()
-      if(d&&d.length>0){
-        const lat=parseFloat(d[0].lat),lng=parseFloat(d[0].lon)
-        setGeoCache(key,lat,lng)
-        return {lat,lng}
-      }
-    }catch(e){}
-  }
   return null
 }
 
@@ -1668,17 +1665,8 @@ async function initCarte(){
   const container=document.getElementById('map')
   if(!container) return
 
-  // Afficher chargement
-  container.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:#f5f5f5"><div style="font-size:24px">🗺️</div><div style="font-size:13px;color:#666">Géolocalisation des bâtiments…</div></div>'
-  
-  // Recréer le div map proprement
-  const mapDiv=document.createElement('div')
-  mapDiv.id='map-inner'
-  mapDiv.style.cssText='height:480px;width:100%'
-  container.innerHTML=''
-  container.appendChild(mapDiv)
-
-  mapInstance=L.map('map-inner').setView([44.5,1.5],6)
+  // Initialiser Leaflet directement sur le div existant
+  mapInstance=L.map('map',{zoomControl:true}).setView([44.5,1.5],6)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>',
     maxZoom:19
@@ -1693,9 +1681,6 @@ async function initCarte(){
   for(let i=0;i<allBats.length;i++){
     const b=allBats[i]
     if(!b.adresse&&!b.ville) continue
-
-    // Délai entre requêtes (sauf première)
-    if(i>0) await sleep(1200)
 
     const coords=await geocodeAdresse(b.adresse||'',b.ville||'',b.code_postal||'')
     if(!coords){ nbErr++;console.warn('Géocode échoué:',b.nom);continue }
@@ -2207,8 +2192,18 @@ function showPage(name,el){
   if(name==='batiments') renderBatiments()
   if(name==='stats') renderStats()
   if(name==='historique') renderHistorique()
-  if(name==='carte') setTimeout(initCarte,100)
-  if(name==='carte') setTimeout(initCarte,100)
+  if(name==='carte') setTimeout(()=>{
+    // Force map container to have proper dimensions before init
+    const mapEl=document.getElementById('map')
+    if(mapEl) mapEl.style.height='480px'
+    initCarte()
+  },200)
+  if(name==='carte') setTimeout(()=>{
+    // Force map container to have proper dimensions before init
+    const mapEl=document.getElementById('map')
+    if(mapEl) mapEl.style.height='480px'
+    initCarte()
+  },200)
 }
 
 // Ajouter bouton récurrence dans topbar bons
