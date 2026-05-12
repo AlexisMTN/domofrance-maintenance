@@ -1112,13 +1112,14 @@ function chronoStart(){
   if(currentBonId){
     sb.from('bons_travail').update({statut:'en_cours',date_debut:chronoStartTime.toISOString()}).eq('id',currentBonId).then(async()=>{
       await loadBons()
-      // Mettre à jour visuellement
       document.querySelectorAll('.statut-btn').forEach(b=>b.classList.remove('active'))
       const btnEl=document.getElementById('sb-en_cours')
       if(btnEl) btnEl.classList.add('active')
       const bon=allBons.find(b=>b.id===currentBonId)
       if(bon) document.getElementById('d-badges').innerHTML=badge(bon.statut)+' '+badge(bon.priorite)
-      renderDashboard();renderBonsTable()
+      renderDashboard()
+      renderBonsTable()
+      updateUrgentBadge()
     })
   }
 }
@@ -1374,17 +1375,24 @@ async function changeStatut(statut){
   if(!currentBonId) return
   const extra=statut==='en_cours'?{date_debut:new Date().toISOString()}:statut==='termine'?{date_fin:new Date().toISOString()}:{}
   await sb.from('bons_travail').update({statut,...extra}).eq('id',currentBonId)
-  // Mettre à jour visuellement tous les boutons
+
+  // Recharger les données
+  await loadBons()
+
+  // Mettre à jour visuellement le modal détail
   document.querySelectorAll('.statut-btn').forEach(b=>b.classList.remove('active'))
   const btnEl=document.getElementById('sb-'+statut)
   if(btnEl) btnEl.classList.add('active')
-  // Mettre à jour le badge dans le header du modal
-  await loadBons()
   const bonUpdated=allBons.find(b=>b.id===currentBonId)
   if(bonUpdated){
     document.getElementById('d-badges').innerHTML=badge(bonUpdated.statut)+' '+badge(bonUpdated.priorite)
   }
-  renderDashboard();renderBonsTable()
+
+  // Mettre à jour la liste des bons EN TEMPS RÉEL
+  renderDashboard()
+  renderBonsTable()
+  updateUrgentBadge()
+
   showToast('Statut : '+(STATUT_LABEL[statut]||statut))
   if(statut==='en_cours') chronoStart()
   if(statut==='en_attente') chronoPause()
@@ -1517,8 +1525,11 @@ async function confirmerAttente(){
   closeModal('attente')
   showToast('Bon mis en attente : '+raison)
 
-  // Recharger en arrière-plan
-  await loadBons();renderDashboard();renderBonsTable()
+  // Recharger et mettre à jour la liste
+  await loadBons()
+  renderDashboard()
+  renderBonsTable()
+  updateUrgentBadge()
 
   // Recharger les commentaires dans le détail
   const {data:comments}=await sb.from('commentaires').select('*').eq('bon_id',currentBonId).order('created_at')
