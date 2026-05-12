@@ -153,8 +153,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
   <div class="login-box">
     <div class="login-logo">
       <div id="login-logo-img"></div>
-      <div class="login-logo-sub">Maintenance</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:2px">Pôle Immobilier et Environnement de Travail</div>
+      <div style="margin-top:8px">
+        <div style="font-size:13px;color:#1a1a1a;font-weight:600;letter-spacing:0.5px">Maintenance</div>
+        <div style="font-size:10px;color:#333;margin-top:3px;letter-spacing:0.8px;text-transform:uppercase">Pôle Immobilier &amp; Environnement de Travail</div>
+      </div>
     </div>
     <div class="login-error" id="login-error"></div>
     <div id="login-form">
@@ -195,7 +197,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo" id="sidebar-logo-container">
       <div id="sidebar-logo-img"></div>
-      <div style="font-size:10px;color:var(--navy);text-align:center;margin-top:4px;font-weight:500;line-height:1.3">Maintenance<br>Pôle Immobilier et Environnement de Travail</div>
+      <div style="font-size:9px;color:rgba(0,0,0,0.5);text-align:center;margin-top:3px;font-weight:400;letter-spacing:0.3px;line-height:1.4">Maintenance · Pôle Immobilier<br>et Environnement de Travail</div>
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section">Principal</div>
@@ -769,9 +771,15 @@ function onLogin(user){
   init()
 }
 
+// Toujours afficher la page de connexion au démarrage
+// L'utilisateur doit cliquer sur "Se connecter" même si session active
+showLoginPage()
+// Pré-remplir l'email si session existante
 sb.auth.getSession().then(({data:{session}})=>{
-  if(session) onLogin(session.user)
-  else showLoginPage()
+  if(session&&session.user){
+    const emailField=document.getElementById('login-email')
+    if(emailField) emailField.value=session.user.email
+  }
 })
 
 sb.auth.onAuthStateChange((event,session)=>{
@@ -1159,7 +1167,7 @@ async function genererEtEnvoyerPDF(bon,photos,comments,auteur,dureeH){
   }
   doc.setTextColor(255,255,255)
   doc.setFontSize(8);doc.setFont('helvetica','normal')
-  doc.text('Maintenance - Pole Immobilier et Environnement de Travail',margin,26)
+  doc.setFontSize(7);doc.text('MAINTENANCE — PÔLE IMMOBILIER ET ENVIRONNEMENT DE TRAVAIL',margin,27)
   doc.setFontSize(8)
   doc.text(new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}),W-margin,12,{align:'right'})
   doc.text("Bon d'Intervention - Rapport de cloture",W-margin,20,{align:'right'})
@@ -1249,7 +1257,7 @@ async function genererEtEnvoyerPDF(bon,photos,comments,auteur,dureeH){
   for(let i=1;i<=pageCount;i++){
     doc.setPage(i);doc.setFillColor(...marine);doc.rect(0,287,W,10,'F')
     doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont('helvetica','normal')
-    doc.text('DOMOFRANCE — Maintenance - Pole Immobilier et Environnement de Travail',margin,293)
+    doc.text('DOMOFRANCE — Maintenance · Pôle Immobilier et Environnement de Travail',margin,293)
     doc.text('Page '+i+'/'+pageCount,W-margin,293,{align:'right'})
   }
 
