@@ -471,7 +471,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           <div>
             <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">💬 Commentaires</div>
             <div id="d-comments" style="margin-bottom:12px"></div>
-            <input class="form-input" id="c-auteur" placeholder="Votre nom" style="margin-bottom:8px">
+            <div id="c-auteur-display" style="background:var(--gray);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">—</div><input type="hidden" id="c-auteur">
             <textarea class="form-textarea" id="c-text" placeholder="Ajouter une note…" style="margin-bottom:8px"></textarea>
             <button class="btn btn-primary" style="font-size:12px;padding:8px 14px" onclick="addComment()">Envoyer</button>
           </div>
@@ -528,7 +528,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
     <div class="modal-head"><div class="modal-title">✅ Clôturer l'intervention</div><button class="modal-close" onclick="closeModal('terminer')">✕</button></div>
     <div class="modal-body">
       <div style="background:var(--green-light);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--green)">✅ Vous êtes sur le point de clôturer ce bon.</div>
-      <div class="form-group"><label class="form-label">Votre nom *</label><input class="form-input" id="terminer-auteur" placeholder="Prénom Nom"></div>
+      <div class="form-group"><label class="form-label">Clôturé par</label><div id="terminer-auteur-display" style="background:var(--gray);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;color:var(--text)">—</div><input type="hidden" id="terminer-auteur"></div>
       <div class="form-group">
         <label class="form-label">📷 Photo APRÈS intervention (optionnel)</label>
         <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px;border:2px dashed #66BB6A;border-radius:8px;cursor:pointer;font-size:13px;color:var(--green);font-weight:600;background:var(--green-light)">
@@ -1086,6 +1086,7 @@ async function openDetail(id){
   }).join('')||'<div style="font-size:13px;color:var(--text3);margin-bottom:12px">Aucun commentaire</div>'
   updateReopenBtn(b.statut)
   openModal('detail')
+  setTimeout(prefillAllAuteurs,100)
 }
 
 function updateReopenBtn(statut){
@@ -2155,6 +2156,45 @@ async function retelechargerPDF(bonId){
   }
 }
 
+
+function prefillAuteur(){
+  const field=document.getElementById('c-auteur')
+  if(!field||field.value!=='') return
+  sb.auth.getUser().then(({data:{user}})=>{
+    if(user){
+      const emailPart=user.email.split('@')[0]
+      const parts=emailPart.split('.')
+      let nom=''
+      if(parts.length>=2){
+        nom=parts[0].charAt(0).toUpperCase()+parts[0].slice(1)+' '+parts[1].charAt(0).toUpperCase()+parts[1].slice(1)
+      } else {
+        nom=user.user_metadata?.full_name||emailPart
+      }
+      field.value=nom
+      const display=document.getElementById('c-auteur-display')
+      if(display) display.textContent=nom
+    }
+  })
+}
+
+// Pré-remplir au chargement du détail
+function prefillAllAuteurs(){
+  prefillAuteur()
+  const tField=document.getElementById('terminer-auteur')
+  if(tField&&tField.value===''){
+    sb.auth.getUser().then(({data:{user}})=>{
+      if(user){
+        const emailPart=user.email.split('@')[0]
+        const parts=emailPart.split('.')
+        let nom=parts.length>=2?parts[0].charAt(0).toUpperCase()+parts[0].slice(1)+' '+parts[1].charAt(0).toUpperCase()+parts[1].slice(1):user.user_metadata?.full_name||emailPart
+        tField.value=nom
+        const d=document.getElementById('terminer-auteur-display')
+        if(d) d.textContent=nom
+      }
+    })
+  }
+}
+
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
 
 // ── FILTRE PAR BATIMENT ──
@@ -2349,7 +2389,25 @@ function validerSignature(){
 
 // Override ouvrirTerminer pour inclure signature
 function ouvrirTerminer(){
-  document.getElementById('terminer-auteur').value=''
+  // Pré-remplir avec le nom de l'utilisateur connecté
+  const auteurField=document.getElementById('terminer-auteur')
+  if(auteurField&&auteurField.value===''){
+    sb.auth.getUser().then(({data:{user}})=>{
+      if(user){
+        const emailPart=user.email.split('@')[0]
+        const parts=emailPart.split('.')
+        let nom=''
+        if(parts.length>=2){
+          nom=parts[0].charAt(0).toUpperCase()+parts[0].slice(1)+' '+parts[1].charAt(0).toUpperCase()+parts[1].slice(1)
+        } else {
+          nom=user.user_metadata?.full_name||emailPart
+        }
+        auteurField.value=nom
+        const display=document.getElementById('terminer-auteur-display')
+        if(display) display.textContent=nom
+      }
+    })
+  }
   document.getElementById('terminer-comment').value=''
   document.getElementById('terminer-photo-preview').innerHTML=''
   document.getElementById('terminer-photo').value=''
