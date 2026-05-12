@@ -1191,7 +1191,14 @@ async function init(){
   await Promise.all([loadBons(),loadTechs(),loadBats()])
   await loadBonPhotos()
   renderDashboard();renderCalendar()
-  sb.channel('bons').on('postgres_changes',{event:'*',schema:'public',table:'bons_travail'},()=>{loadBons().then(async()=>{await loadBonPhotos();renderDashboard();renderBonsTable();renderStats()})}).subscribe()
+  sb.channel('bons').on('postgres_changes',{event:'*',schema:'public',table:'bons_travail'},async()=>{
+    await loadBons()
+    await loadBonPhotos()
+    renderDashboard()
+    renderBonsTable()
+    renderStats()
+    updateUrgentBadge()
+  }).subscribe()
   setTimeout(supprimerBonsExpires,3000)
 }
 
@@ -1274,7 +1281,10 @@ function filterBons(f,el){
 }
 
 async function openDetail(id){
-  currentBonId=id;resetChrono()
+  currentBonId=id
+  // Toujours recharger les données fraîches avant d'ouvrir
+  await loadBons()
+  resetChrono()
   const b=allBons.find(x=>x.id===id);if(!b) return
   document.getElementById('d-titre').textContent=b.titre
   document.getElementById('d-badges').innerHTML=badge(b.statut)+' '+badge(b.priorite)
@@ -2464,7 +2474,7 @@ function showPage(name, el){
   document.getElementById('page-title').textContent=pt[name]||name
   if(el) el.classList.add('active')
   closeSidebar()
-  if(name==='bons'){renderBonsTable();populateFilterBat()}
+  if(name==='bons'){rafraichirTout().then(()=>populateFilterBat())}
   if(name==='techniciens') renderTechs()
   if(name==='batiments') renderBatiments()
   if(name==='stats'){renderStats();setTimeout(renderStatsCouts,100)}
@@ -3398,7 +3408,7 @@ function showPage(name,el){
   document.getElementById('page-title').textContent=pageTitles2[name]||name
   if(el) el.classList.add('active')
   closeSidebar()
-  if(name==='bons'){renderBonsTable();populateFilterBat()}
+  if(name==='bons'){rafraichirTout().then(()=>populateFilterBat())}
   if(name==='techniciens') renderTechs()
   if(name==='batiments') renderBatiments()
   if(name==='stats'){renderStats();setTimeout(renderStatsCouts,100)}
