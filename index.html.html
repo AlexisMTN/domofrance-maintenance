@@ -1338,7 +1338,7 @@ async function reopenBon(){
   if(!currentBonId) return
   if(!confirm('Réouvrir ce bon de travail ?')) return
   await sb.from('bons_travail').update({statut:'planifie',date_fin:null,suppression_prevue:null}).eq('id',currentBonId)
-  await loadBons();renderDashboard();renderBonsTable()
+  await rafraichirTout()
   showToast('Bon réouvert !')
   await openDetail(currentBonId)
 }
@@ -1346,12 +1346,12 @@ async function reopenBon(){
 async function changeStatut(statut){
   if(!currentBonId) return
   const extra=statut==='en_cours'?{date_debut:new Date().toISOString()}:statut==='termine'?{date_fin:new Date().toISOString()}:{}
-  await sb.from('bons_travail').update({statut,...extra}).eq('id',currentBonId)
 
-  // Recharger les données
-  await loadBons()
+  // Mise à jour optimiste IMMÉDIATE dans allBons
+  const bonIdx=allBons.findIndex(b=>b.id===currentBonId)
+  if(bonIdx!==-1) allBons[bonIdx]={...allBons[bonIdx],statut,...extra}
 
-  // Mettre à jour visuellement le modal détail
+  // Mettre à jour visuellement IMMÉDIATEMENT
   document.querySelectorAll('.statut-btn').forEach(b=>b.classList.remove('active'))
   const btnEl=document.getElementById('sb-'+statut)
   if(btnEl) btnEl.classList.add('active')
@@ -1360,16 +1360,22 @@ async function changeStatut(statut){
     document.getElementById('d-badges').innerHTML=badge(bonUpdated.statut)+' '+badge(bonUpdated.priorite)
   }
 
-  // Mettre à jour la liste des bons EN TEMPS RÉEL
+  // Re-render la liste immédiatement
   renderDashboard()
   renderBonsTable()
   updateUrgentBadge()
-
+  updateReopenBtn(statut)
   showToast('Statut : '+(STATUT_LABEL[statut]||statut))
+
+  // Puis sauvegarder en base
+  await sb.from('bons_travail').update({statut,...extra}).eq('id',currentBonId)
+
+  // Et recharger pour confirmer
+  await rafraichirTout()
+
   if(statut==='en_cours') chronoStart()
   if(statut==='en_attente') chronoPause()
   if(statut==='planifie') resetChrono()
-  updateReopenBtn(statut)
 }
 
 async function changeTech(technicien_id){
@@ -1498,10 +1504,7 @@ async function confirmerAttente(){
   showToast('Bon mis en attente : '+raison)
 
   // Recharger et mettre à jour la liste
-  await loadBons()
-  renderDashboard()
-  renderBonsTable()
-  updateUrgentBadge()
+  await rafraichirTout()
 
   // Recharger les commentaires dans le détail
   const {data:comments}=await sb.from('commentaires').select('*').eq('bon_id',currentBonId).order('created_at')
@@ -3043,6 +3046,12 @@ function editTech(id){
 }
 
 function fermerChoixArret(){const el=document.getElementById('modal-choix-arret');if(el)el.remove()}
+
+// ── RAFRAICHISSEMENT CENTRAL ──
+async function rafraichirTout(){
+  await rafraichirTout()
+}
+
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
 
 // ── FILTRE PAR BATIMENT ──
