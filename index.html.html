@@ -746,7 +746,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 <!-- MODAL TECHNICIEN -->
 <div class="modal-overlay" id="modal-addTech" style="display:none" onclick="if(event.target===this)closeModal('addTech')">
   <div class="modal">
-    <div class="modal-head"><div class="modal-title">Nouveau technicien</div><button class="modal-close" onclick="closeModal('addTech')">✕</button></div>
+    <div class="modal-head"><div class="modal-title" id="tech-modal-title">Nouveau technicien</div><button class="modal-close" onclick="closeModal('addTech')">✕</button></div>
     <div class="modal-body">
       <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Informations générales</div>
       <div class="form-row">
@@ -774,7 +774,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('addTech')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveTech()">✓ Ajouter</button>
+      <button class="btn btn-primary" id="btn-save-tech" onclick="saveTech()">✓ Ajouter</button>
     </div>
   </div>
 </div>
@@ -1681,11 +1681,13 @@ function renderTechs(){
     +'<div style="background:'+s.bg+';color:'+s.color+';font-size:10px;font-weight:700;border-radius:6px;padding:3px 8px">'+s.label+'</div></div>'
     +(t.telephone?'<div style="font-size:12px;color:var(--text2);margin-bottom:6px">📞 '+t.telephone+'</div>':'')
     +'<div style="font-size:12px;color:var(--text2);margin-bottom:14px">✉️ '+t.email+'</div>'
-    +'<select class="form-select" style="font-size:12px" onchange="updateTechStatut(\''+t.id+'\',this.value)">'
+    +'<select class="form-select" style="font-size:12px;margin-bottom:8px" onchange="updateTechStatut(\''+t.id+'\',this.value)">'
     +'<option value="disponible"'+(t.statut==='disponible'?' selected':'')+'>Disponible</option>'
     +'<option value="en_intervention"'+(t.statut==='en_intervention'?' selected':'')+'>En intervention</option>'
     +'<option value="hors_service"'+(t.statut==='hors_service'?' selected':'')+'>Hors service</option>'
-    +'</select></div>'
+    +'</select>'
+    +'<button class="btn btn-secondary" style="width:100%;justify-content:center;font-size:12px;padding:7px" onclick="editTech(\''+t.id+'\')">✏️ Modifier la fiche</button>'
+    +'</div>'
   }).join('')
 }
 
@@ -2379,6 +2381,21 @@ function showPage(name, el){
 const _origOpenModal = openModal
 function openModal(id){
   document.getElementById('modal-'+id).style.display='flex'
+  if(id==='addTech'&&!currentEditTechId){
+    document.getElementById('tech-modal-title').textContent='Nouveau technicien'
+    document.getElementById('btn-save-tech').textContent='✓ Ajouter'
+    document.getElementById('t-prenom').value=''
+    document.getElementById('t-nom').value=''
+    document.getElementById('t-email').value=''
+    document.getElementById('t-tel').value=''
+    document.getElementById('t-spec').value='Généraliste'
+    document.getElementById('t-taux').value=''
+    document.getElementById('t-assurance').value=''
+    document.getElementById('t-maintenance').value=''
+    document.getElementById('t-conso').value=''
+    document.getElementById('t-vehicule').value=''
+    document.getElementById('t-motorisation').value='diesel'
+  }
   if(id==='addControle'){
     populateControleSelects()
     if(!currentEditControleId){
@@ -2906,6 +2923,30 @@ function renderStatsCouts(){
         +'<div style="font-size:14px;font-weight:700;color:var(--navy)">'+total.toFixed(2)+' €</div>'
         +'</div>'
     }).join('')
+}
+
+
+// ── MODIFIER TECHNICIEN ──
+let currentEditTechId = null
+
+function editTech(id){
+  const t = allTechs.find(x=>x.id===id)
+  if(!t) return
+  currentEditTechId = id
+  document.getElementById('tech-modal-title').textContent = 'Modifier le technicien'
+  document.getElementById('btn-save-tech').textContent = '✓ Enregistrer'
+  document.getElementById('t-prenom').value = t.prenom||''
+  document.getElementById('t-nom').value = t.nom||''
+  document.getElementById('t-email').value = t.email||''
+  document.getElementById('t-tel').value = t.telephone||''
+  document.getElementById('t-spec').value = t.specialite||'Généraliste'
+  document.getElementById('t-taux').value = t.taux_horaire||''
+  document.getElementById('t-assurance').value = t.assurance_mensuelle||''
+  document.getElementById('t-maintenance').value = t.maintenance_mensuelle||''
+  document.getElementById('t-conso').value = t.conso_100km||''
+  document.getElementById('t-vehicule').value = t.vehicule||''
+  document.getElementById('t-motorisation').value = t.motorisation||'diesel'
+  openModal('addTech')
 }
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
