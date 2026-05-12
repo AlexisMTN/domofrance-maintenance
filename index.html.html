@@ -1621,76 +1621,140 @@ function setMobileNav(el){document.querySelectorAll('.mobile-nav-item').forEach(
 // ── CARTE LEAFLET ──
 let mapInstance=null
 
+// Cache géocodage en localStorage
+function getGeoCache(key){ try{const c=JSON.parse(localStorage.getItem('geo_'+key));if(c&&Date.now()-c.ts<30*24*60*60*1000)return c}catch(e){}return null }
+function setGeoCache(key,lat,lng){ try{localStorage.setItem('geo_'+key,JSON.stringify({lat,lng,ts:Date.now()}))}catch(e){} }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)) }
+
+async function geocodeAdresse(adresse,ville,cp){
+  const key=(adresse+cp+ville).replace(/\s+/g,'').toLowerCase()
+  const cached=getGeoCache(key)
+  if(cached) return {lat:cached.lat,lng:cached.lng}
+
+  // Essai 1 : adresse complète
+  const addr1=encodeURIComponent(adresse+', '+(cp||'')+' '+ville+', France')
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+addr1+'&limit=1&countrycodes=fr',{headers:{'Accept-Language':'fr'}})
+    const d=await r.json()
+    if(d&&d.length>0){
+      const lat=parseFloat(d[0].lat),lng=parseFloat(d[0].lon)
+      setGeoCache(key,lat,lng)
+      return {lat,lng}
+    }
+  }catch(e){}
+
+  await sleep(1100)
+
+  // Essai 2 : code postal + ville uniquement
+  if(cp||ville){
+    const addr2=encodeURIComponent((cp||'')+' '+ville+', France')
+    try{
+      const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+addr2+'&limit=1&countrycodes=fr',{headers:{'Accept-Language':'fr'}})
+      const d=await r.json()
+      if(d&&d.length>0){
+        const lat=parseFloat(d[0].lat),lng=parseFloat(d[0].lon)
+        setGeoCache(key,lat,lng)
+        return {lat,lng}
+      }
+    }catch(e){}
+  }
+  return null
+}
+
 async function initCarte(){
   if(!window.L){showToast('Chargement de la carte…');return}
   if(mapInstance){mapInstance.remove();mapInstance=null}
 
-  // Géocoder les bâtiments et afficher
   const container=document.getElementById('map')
   if(!container) return
 
-  // Centre France par défaut
-  mapInstance=L.map('map').setView([44.5,0.5],6)
+  // Afficher chargement
+  container.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:#f5f5f5"><div style="font-size:24px">🗺️</div><div style="font-size:13px;color:#666">Géolocalisation des bâtiments…</div></div>'
+  
+  // Recréer le div map proprement
+  const mapDiv=document.createElement('div')
+  mapDiv.id='map-inner'
+  mapDiv.style.cssText='height:480px;width:100%'
+  container.innerHTML=''
+  container.appendChild(mapDiv)
+
+  mapInstance=L.map('map-inner').setView([44.5,1.5],6)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'© OpenStreetMap',maxZoom:19
+    attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+    maxZoom:19
   }).addTo(mapInstance)
 
   const bounds=[]
   const carteList=document.getElementById('carte-list')
-  if(carteList) carteList.innerHTML=''
+  if(carteList) carteList.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px">Géolocalisation en cours…</div>'
 
-  for(const b of allBats){
-    if(!b.adresse||!b.ville) continue
-    try{
-      const addr=encodeURIComponent(b.adresse+', '+(b.code_postal||'')+' '+b.ville+', France')
-      const resp=await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+addr+'&limit=1')
-      const data=await resp.json()
-      if(!data||data.length===0) continue
-      const lat=parseFloat(data[0].lat)
-      const lng=parseFloat(data[0].lon)
-      bounds.push([lat,lng])
+  let nbOk=0,nbErr=0
 
-      const bons=allBons.filter(x=>x.batiment_id===b.id&&x.statut!=='termine'&&x.statut!=='annule')
-      const urgents=bons.filter(x=>x.priorite==='urgence').length
-      const enCours=bons.filter(x=>x.statut==='en_cours').length
-      const color=urgents>0?'#DC0D4D':enCours>0?'#E65100':'#183960'
+  for(let i=0;i<allBats.length;i++){
+    const b=allBats[i]
+    if(!b.adresse&&!b.ville) continue
 
-      // Marqueur personnalisé
-      const icon=L.divIcon({
-        className:'',
-        html:'<div style="background:'+color+';width:32px;height:32px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px">'+bons.length+'</div>',
-        iconSize:[32,32],iconAnchor:[16,16]
-      })
+    // Délai entre requêtes (sauf première)
+    if(i>0) await sleep(1200)
 
-      const marker=L.marker([lat,lng],{icon}).addTo(mapInstance)
-      const popupContent='<div style="font-family:sans-serif;min-width:180px">'
-        +'<div style="font-weight:700;font-size:14px;margin-bottom:6px">'+b.nom+'</div>'
-        +'<div style="font-size:12px;color:#666;margin-bottom:8px">'+b.adresse+', '+b.ville+'</div>'
-        +(urgents>0?'<div style="color:#DC0D4D;font-size:12px;font-weight:600">🔴 '+urgents+' urgence(s)</div>':'')
-        +(enCours>0?'<div style="color:#E65100;font-size:12px">⚙️ '+enCours+' en cours</div>':'')
-        +'<div style="color:#183960;font-size:12px">📋 '+bons.length+' bon(s) actif(s)</div>'
-        +(b.contact_nom?'<div style="font-size:12px;margin-top:6px;padding-top:6px;border-top:1px solid #eee">👤 '+b.contact_nom+(b.contact_telephone?' — <a href="tel:'+b.contact_telephone+'">📞</a>':'')+'</div>':'')
+    const coords=await geocodeAdresse(b.adresse||'',b.ville||'',b.code_postal||'')
+    if(!coords){ nbErr++;console.warn('Géocode échoué:',b.nom);continue }
+
+    const {lat,lng}=coords
+    bounds.push([lat,lng])
+    nbOk++
+
+    const bons=allBons.filter(x=>x.batiment_id===b.id&&x.statut!=='termine'&&x.statut!=='annule')
+    const urgents=bons.filter(x=>x.priorite==='urgence').length
+    const enCours=bons.filter(x=>x.statut==='en_cours').length
+    const color=urgents>0?'#DC0D4D':enCours>0?'#E65100':'#183960'
+
+    const icon=L.divIcon({
+      className:'',
+      html:'<div style="background:'+color+';width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px">'+bons.length+'</div>',
+      iconSize:[34,34],iconAnchor:[17,17]
+    })
+
+    const marker=L.marker([lat,lng],{icon}).addTo(mapInstance)
+    const popup='<div style="font-family:sans-serif;min-width:190px;padding:4px">'
+      +'<div style="font-weight:700;font-size:14px;margin-bottom:4px">'+b.nom+'</div>'
+      +'<div style="font-size:12px;color:#666;margin-bottom:8px">'+b.adresse+', '+(b.code_postal||'')+' '+b.ville+'</div>'
+      +(urgents>0?'<div style="color:#DC0D4D;font-size:12px;font-weight:600;margin-bottom:2px">🔴 '+urgents+' urgence(s)</div>':'')
+      +(enCours>0?'<div style="color:#E65100;font-size:12px;margin-bottom:2px">⚙️ '+enCours+' en cours</div>':'')
+      +'<div style="color:#183960;font-size:12px;margin-bottom:4px">📋 '+bons.length+' bon(s) actif(s)</div>'
+      +(b.contact_nom?'<div style="font-size:12px;margin-top:6px;padding-top:6px;border-top:1px solid #eee">👤 '+b.contact_nom+(b.contact_telephone?' &nbsp;<a href="tel:'+b.contact_telephone+'" style="color:#DC0D4D">📞 '+b.contact_telephone+'</a>':'')+'</div>':'')
+      +'</div>'
+    marker.bindPopup(popup)
+    b._lat=lat;b._lng=lng
+
+    if(carteList){
+      const div=document.createElement('div')
+      div.className='card'
+      div.style.cssText='padding:12px 14px;cursor:pointer;transition:box-shadow .15s'
+      div.onmouseover=()=>div.style.boxShadow='0 4px 12px rgba(0,0,0,.12)'
+      div.onmouseout=()=>div.style.boxShadow=''
+      div.onclick=()=>{ mapInstance.setView([lat,lng],15);marker.openPopup() }
+      div.innerHTML='<div style="display:flex;align-items:center;gap:10px">'
+        +'<div style="width:12px;height:12px;border-radius:50%;background:'+color+';flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.2)"></div>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+b.nom+'</div>'
+        +'<div style="font-size:11px;color:var(--text3)">'+(b.code_postal||'')+' '+b.ville+' · '+bons.length+' bon(s)</div>'
         +'</div>'
-      marker.bindPopup(popupContent)
-      b._lat=lat;b._lng=lng
-
-      // Mini carte dans la liste
-      if(carteList){
-        const div=document.createElement('div')
-        div.className='card'
-        div.style.cssText='padding:12px 14px;cursor:pointer'
-        div.onclick=()=>{ mapInstance.setView([lat,lng],15);marker.openPopup() }
-        div.innerHTML='<div style="display:flex;align-items:center;gap:8px">'
-          +'<div style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0"></div>'
-          +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+b.nom+'</div>'
-          +'<div style="font-size:11px;color:var(--text3)">'+b.ville+' · '+bons.length+' bons</div></div></div>'
-        carteList.appendChild(div)
-      }
-    }catch(e){ console.warn('Geocode error for '+b.nom,e) }
+        +(urgents>0?'<span style="background:var(--red-light);color:var(--red);font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px">'+urgents+' urg.</span>':'')
+        +'</div>'
+      carteList.appendChild(div)
+    }
   }
 
-  if(bounds.length>0) mapInstance.fitBounds(bounds,{padding:[40,40]})
-  else showToast('Ajoutez des bâtiments avec adresse pour les voir sur la carte','error')
+  if(carteList&&carteList.querySelector('div[style*="Géolocalisation"]'))
+    carteList.querySelector('div[style*="Géolocalisation"]').remove()
+
+  if(bounds.length>0){
+    mapInstance.fitBounds(bounds,{padding:[40,40],maxZoom:14})
+    if(nbErr>0) showToast(nbOk+' bâtiment(s) affiché(s), '+nbErr+' adresse(s) non trouvée(s)')
+  } else {
+    showToast('Aucun bâtiment géolocalisé — vérifiez les adresses et codes postaux','error')
+  }
 }
 
 // ── NOTIFICATIONS PUSH ──
