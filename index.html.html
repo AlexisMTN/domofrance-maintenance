@@ -1355,7 +1355,7 @@ async function genererEtEnvoyerPDF(bon,photos,comments,auteur,dureeH){
   }catch(e){console.error('Email:',e)}
 }
 
-async function envoyerEmailPDF(bon,auteur,dureeH,nomFichier,pdfB64){
+async function envoyerEmailPDF(bon,photos,comments,auteur,dureeH){
   const sujet='Bon #'+(bon.numero||'—')+' cloture — '+bon.titre+' — '+(bon.batiments?.nom||'')
   const dureeText=dureeH>0?dureeH+'h':bon.duree_reelle?bon.duree_reelle+'h':'non renseignee'
   const techName=bon.techniciens?bon.techniciens.prenom+' '+bon.techniciens.nom:'—'
@@ -1388,9 +1388,7 @@ async function envoyerEmailPDF(bon,auteur,dureeH,nomFichier,pdfB64){
       body:JSON.stringify({
         to:EMAIL_RECIPIENTS,
         subject:sujet,
-        html:htmlBody,
-        pdfBase64:pdfB64,
-        pdfName:nomFichier
+        html:htmlBody
       })
     })
     const result=await resp.json()
@@ -2186,6 +2184,23 @@ function openModal(id){
   }
 }
 
+
+// ── RETÉLÉCHARGER PDF ──
+async function retelechargerPDF(bonId){
+  showToast('Génération du PDF en cours…')
+  const bon=allBons.find(b=>b.id===bonId)
+  if(!bon){ showToast('Bon introuvable','error'); return }
+  const {data:photos}=await sb.from('photos').select('*').eq('bon_id',bonId).order('created_at')
+  const {data:comments}=await sb.from('commentaires').select('*').eq('bon_id',bonId).order('created_at')
+  try{
+    await genererEtEnvoyerPDF(bon,photos||[],comments||[],'Retéléchargement',bon.duree_reelle||0)
+    showToast('📄 PDF téléchargé !')
+  }catch(e){
+    console.error('PDF error:',e)
+    showToast('Erreur génération PDF','error')
+  }
+}
+
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
 
 // ── FILTRE PAR BATIMENT ──
@@ -2314,14 +2329,15 @@ function renderHistorique(){
       const diff=b.suppression_prevue?Math.ceil((new Date(b.suppression_prevue)-new Date())/(1000*60*60*24)):null
       const supColor=diff!==null&&diff<=3?'var(--red)':'var(--text3)'
       const supText=diff!==null?(diff<=0?"Aujourd'hui":diff+'j restants'):'—'
-      return '<tr onclick="openDetail(\''+b.id+'\')">' 
+      return '<tr>'
         +'<td style="font-weight:600;font-size:12px;color:var(--text3)">#'+(b.numero||'—')+'</td>'
-        +'<td style="font-weight:600">'+b.titre+'</td>'
+        +'<td style="font-weight:600;cursor:pointer" onclick="openDetail(\''+b.id+'\')" >'+b.titre+'</td>'
         +'<td>'+(b.batiments?.nom||'—')+'</td>'
         +'<td>'+(b.techniciens?b.techniciens.prenom+' '+b.techniciens.nom:'—')+'</td>'
         +'<td>'+(b.duree_reelle?b.duree_reelle+'h':'—')+'</td>'
         +'<td style="font-size:12px;color:var(--text3)">'+(b.date_fin?new Date(b.date_fin).toLocaleString('fr-FR'):'—')+'</td>'
         +'<td style="font-size:12px;color:'+supColor+';font-weight:600">🗑️ '+supText+'</td>'
+        +'<td><button class="btn btn-secondary" style="font-size:11px;padding:5px 10px;white-space:nowrap" onclick="retelechargerPDF(\''+b.id+'\')">📄 PDF</button></td>'
         +'</tr>'
     }).join('')
     +'</tbody></table></div></div>'
@@ -2438,7 +2454,7 @@ async function doConfirmerTerminer(){
   const {data:comments}=await sb.from('commentaires').select('*').eq('bon_id',currentBonId).order('created_at')
 
   showToast('Génération du PDF…')
-  try{ await genererEtEnvoyerPDF(bon,photos||[],comments||[],auteur,dureeH,signatureData) }catch(e){ console.error('PDF:',e) }
+  try{ await genererEtEnvoyerPDF(bon,photos||[],comments||[],auteur,dureeH) }catch(e){ console.error('PDF:',e) }
 
   chronoStop()
   await loadBons();await loadBonPhotos();renderDashboard();renderBonsTable()
