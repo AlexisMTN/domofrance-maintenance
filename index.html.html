@@ -1124,43 +1124,12 @@ function previewTerminerPhoto(e){
 }
 
 async function confirmerTerminer(){
+  // Cette fonction est remplacée par le flux signature -> doConfirmerTerminer
+  // Le bouton btn-terminer ouvre maintenant le modal signature
   const auteur=document.getElementById('terminer-auteur').value.trim()
   if(!auteur){showToast('Veuillez indiquer votre nom','error');return}
-  const comment=document.getElementById('terminer-comment').value.trim()
-  const photoFile=document.getElementById('terminer-photo').files[0]
-  const dureeH=parseFloat((chronoSeconds/3600).toFixed(2))
-  const btn=document.getElementById('btn-terminer')
-  btn.textContent='Clôture en cours…';btn.disabled=true
-
-  if(photoFile){
-    const ext=photoFile.name.split('.').pop()
-    const path=currentBonId+'/'+Date.now()+'_apres.'+ext
-    const {error:upErr}=await sb.storage.from('photos').upload(path,photoFile)
-    if(!upErr){
-      const {data:{publicUrl}}=sb.storage.from('photos').getPublicUrl(path)
-      await sb.from('photos').insert([{bon_id:currentBonId,url:publicUrl,legende:'APRÈS'}])
-    }
-  }
-
-  const extra={statut:'termine',date_fin:new Date().toISOString(),suppression_prevue:new Date(Date.now()+15*24*60*60*1000).toISOString()}
-  if(chronoSeconds>0) extra.duree_reelle=dureeH
-  await sb.from('bons_travail').update(extra).eq('id',currentBonId)
-
-  const contenu=comment?'✅ Intervention terminée — '+comment:'✅ Intervention terminée par '+auteur
-  await sb.from('commentaires').insert([{bon_id:currentBonId,auteur,contenu}])
-
-  const bon=allBons.find(b=>b.id===currentBonId)
-  const {data:photos}=await sb.from('photos').select('*').eq('bon_id',currentBonId).order('created_at')
-  const {data:comments}=await sb.from('commentaires').select('*').eq('bon_id',currentBonId).order('created_at')
-
-  showToast('Génération du PDF…')
-  try{ await genererEtEnvoyerPDF(bon,photos||[],comments||[],auteur,dureeH) }catch(e){ console.error('PDF:',e) }
-
-  chronoStop()
-  await loadBons();await loadBonPhotos();renderDashboard();renderBonsTable()
-  btn.textContent='✅ Clôturer le bon';btn.disabled=false
-  closeModal('terminer');closeModal('detail')
-  showToast('✅ Bon clôturé ! PDF envoyé par email.')
+  openModal('signature')
+  setTimeout(initSignatureCanvas,100)
 }
 
 async function genererEtEnvoyerPDF(bon,photos,comments,auteur,dureeH){
