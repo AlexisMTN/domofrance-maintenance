@@ -1356,31 +1356,50 @@ async function genererEtEnvoyerPDF(bon,photos,comments,auteur,dureeH){
 }
 
 async function envoyerEmailPDF(bon,auteur,dureeH,nomFichier,pdfB64){
-  const sujet='✅ Bon #'+(bon.numero||'—')+' cloture — '+bon.titre+' — '+(bon.batiments?.nom||'')
+  const sujet='Bon #'+(bon.numero||'—')+' cloture — '+bon.titre+' — '+(bon.batiments?.nom||'')
   const dureeText=dureeH>0?dureeH+'h':bon.duree_reelle?bon.duree_reelle+'h':'non renseignee'
   const techName=bon.techniciens?bon.techniciens.prenom+' '+bon.techniciens.nom:'—'
   const htmlBody='<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">'
-    +'<div style="background:#183960;padding:20px;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:20px">DOMOFRANCE</h1><p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:13px">Rapport d\'intervention</p></div>'
+    +'<div style="background:#183960;padding:20px;border-radius:8px 8px 0 0">'
+    +'<h1 style="color:#fff;margin:0;font-size:20px">DOMOFRANCE</h1>'
+    +'<p style="color:rgba(255,255,255,0.7);margin:4px 0 0;font-size:13px">Maintenance - Pole Immobilier et Environnement de Travail</p></div>'
     +'<div style="background:#f8f8f8;padding:24px;border-radius:0 0 8px 8px;border:1px solid #e0e0e0">'
-    +'<div style="background:#E8F5E9;border-left:4px solid #2E7D32;padding:12px 16px;border-radius:4px;margin-bottom:20px"><strong style="color:#2E7D32">✅ Bon d\'intervention clôturé</strong></div>'
+    +'<div style="background:#E8F5E9;border-left:4px solid #2E7D32;padding:12px 16px;border-radius:4px;margin-bottom:20px">'
+    +'<strong style="color:#2E7D32">Bon intervention cloture</strong></div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:14px">'
-    +'<tr><td style="padding:8px;color:#666;width:40%">N° Bon</td><td style="padding:8px;font-weight:bold">#'+(bon.numero||'—')+'</td></tr>'
-    +'<tr style="background:#f0f0f0"><td style="padding:8px;color:#666">Intitulé</td><td style="padding:8px;font-weight:bold">'+bon.titre+'</td></tr>'
-    +'<tr><td style="padding:8px;color:#666">Bâtiment</td><td style="padding:8px">'+(bon.batiments?.nom||'—')+'</td></tr>'
+    +'<tr><td style="padding:8px;color:#666;width:40%">N Bon</td><td style="padding:8px;font-weight:bold">#'+(bon.numero||'—')+'</td></tr>'
+    +'<tr style="background:#f0f0f0"><td style="padding:8px;color:#666">Intitule</td><td style="padding:8px;font-weight:bold">'+bon.titre+'</td></tr>'
+    +'<tr><td style="padding:8px;color:#666">Batiment</td><td style="padding:8px">'+(bon.batiments?.nom||'—')+'</td></tr>'
     +'<tr style="background:#f0f0f0"><td style="padding:8px;color:#666">Technicien</td><td style="padding:8px">'+techName+'</td></tr>'
-    +'<tr><td style="padding:8px;color:#666">Clôturé par</td><td style="padding:8px">'+auteur+'</td></tr>'
-    +'<tr style="background:#f0f0f0"><td style="padding:8px;color:#666">Durée</td><td style="padding:8px;font-weight:bold;color:#2E7D32">'+dureeText+'</td></tr>'
-    +'<tr><td style="padding:8px;color:#666">Date clôture</td><td style="padding:8px">'+new Date().toLocaleString('fr-FR')+'</td></tr>'
+    +'<tr><td style="padding:8px;color:#666">Cloture par</td><td style="padding:8px">'+auteur+'</td></tr>'
+    +'<tr style="background:#f0f0f0"><td style="padding:8px;color:#666">Duree</td><td style="padding:8px;font-weight:bold;color:#2E7D32">'+dureeText+'</td></tr>'
+    +'<tr><td style="padding:8px;color:#666">Date cloture</td><td style="padding:8px">'+new Date().toLocaleString('fr-FR')+'</td></tr>'
     +'</table>'
-    +'<p style="font-size:12px;color:#999;margin-top:20px">Rapport complet en pièce jointe PDF.<br>Ce bon sera supprimé automatiquement dans 15 jours.</p>'
+    +'<p style="font-size:12px;color:#999;margin-top:20px">Le rapport PDF complet est joint a cet email.<br>Ce bon sera supprime dans 15 jours.</p>'
     +'</div></div>'
-  const resp=await fetch('https://api.resend.com/emails',{
-    method:'POST',
-    headers:{Authorization:'Bearer '+RESEND_KEY,'Content-Type':'application/json'},
-    body:JSON.stringify({from:'DOMOFRANCE Maintenance <onboarding@resend.dev>',to:EMAIL_RECIPIENTS,subject:sujet,html:htmlBody,attachments:[{filename:nomFichier,content:pdfB64}]})
-  })
-  if(resp.ok) console.log('Email envoyé ✓')
-  else console.error('Email error:',await resp.text())
+
+  try{
+    const resp=await fetch('https://eomijzmsevgyyeroqdbo.supabase.co/functions/v1/send-email',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+SUPABASE_KEY,
+      },
+      body:JSON.stringify({
+        to:EMAIL_RECIPIENTS,
+        subject:sujet,
+        html:htmlBody,
+        pdfBase64:pdfB64,
+        pdfName:nomFichier
+      })
+    })
+    const result=await resp.json()
+    if(resp.ok) console.log('Email envoye ✓',result)
+    else { console.error('Email error:',result); showToast('Erreur email: '+JSON.stringify(result),'error') }
+  }catch(e){
+    console.error('Email error:',e)
+    showToast('Erreur envoi email','error')
+  }
 }
 
 async function supprimerBonsExpires(){
