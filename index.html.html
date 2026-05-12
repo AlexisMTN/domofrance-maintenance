@@ -47,6 +47,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 .badge-basse{background:var(--green-light);color:var(--green)}
 .badge-en_cours{background:var(--orange-light);color:var(--orange)}
 .badge-planifie{background:var(--blue-light);color:var(--blue)}
+.badge-nouveau{background:var(--gray2);color:var(--text2)}
+.badge-nouveau{background:var(--gray2);color:var(--text2)}
 .badge-en_attente{background:var(--yellow-light);color:var(--yellow)}
 .badge-termine{background:var(--green-light);color:var(--green)}
 .badge-annule{background:var(--gray2);color:var(--gray3)}
@@ -255,6 +257,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           <button class="filter-tab" onclick="filterBons('urgence',this)">🔴 Urgence</button>
           <button class="filter-tab" onclick="filterBons('en_cours',this)">⚙️ En cours</button>
           <button class="filter-tab" onclick="filterBons('en_attente',this)">⏸️ En attente</button>
+          <button class="filter-tab" onclick="filterBons('nouveau',this)">🆕 Nouveau</button>
           <button class="filter-tab" onclick="filterBons('planifie',this)">📅 Planifié</button>
           <button class="filter-tab" onclick="showPage('historique',document.querySelectorAll('.nav-item')[6])">🗂️ Voir l'historique →</button>
         </div>
@@ -406,10 +409,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
         <div class="form-group"><label class="form-label">Bâtiment</label><select class="form-select" id="f-bat"><option value="">— Sélectionner —</option></select></div>
         <div class="form-group"><label class="form-label">Zone / Appartement</label><input class="form-input" id="f-zone" placeholder="Ex: App. 3B"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Technicien</label><select class="form-select" id="f-tech"><option value="">— Non assigné —</option></select></div>
-        <div class="form-group"><label class="form-label">Date prévue</label><input type="date" class="form-input" id="f-date"></div>
-      </div>
+      <div class="form-group"><label class="form-label">Technicien</label><select class="form-select" id="f-tech"><option value="">— Non assigné —</option></select></div>
       <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="f-desc" placeholder="Décrivez le problème…"></textarea></div>
       <div class="form-group">
         <label class="form-label">📷 Photos (optionnel)</label>
@@ -440,18 +440,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           <div style="margin-bottom:16px">
             <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Statut de l'intervention</div>
             <div class="statut-btns">
-              <div class="statut-btn btn-orange" id="sb-en_cours" onclick="changeStatut('en_cours')">⚙️ En cours</div>
+              <div class="statut-btn btn-secondary" id="sb-nouveau" onclick="changeStatut('nouveau')">🆕 Nouveau</div>
+              <div class="statut-btn btn-secondary" id="sb-planifie" onclick="ouvrirPlanifier()">📅 Planifier</div>
+              <div class="statut-btn btn-orange" id="sb-en_cours" onclick="ouvrirMission()">🚗 Accepter mission</div>
               <div class="statut-btn btn-warning" id="sb-en_attente" onclick="ouvrirAttente()">⏸️ En attente</div>
               <div class="statut-btn btn-success" id="sb-termine" onclick="ouvrirTerminer()">✅ Terminer</div>
-              <div class="statut-btn btn-secondary" id="sb-planifie" onclick="changeStatut('planifie')">📅 Planifié</div>
-              <div class="statut-btn btn-secondary" id="sb-annule" style="display:none" onclick="changeStatut('annule')">🚫 Annulé</div>
             </div>
           </div>
           <div class="chrono-box">
             <div class="chrono-label">Durée d'intervention</div>
             <div class="chrono-time" id="chrono-display">00:00:00</div>
             <div class="chrono-btns">
-              <button class="btn btn-secondary" style="font-size:12px;padding:6px 14px" onclick="chronoStart()" id="btn-start">▶ Démarrer</button>
+              <button class="btn btn-secondary" style="font-size:12px;padding:6px 14px" onclick="demarrerOuReprendre()" id="btn-start">▶ Démarrer</button>
               <button class="btn btn-warning" style="font-size:12px;padding:6px 14px" onclick="chronoPause()" id="btn-pause" disabled>⏸ Pause</button>
               <button class="btn btn-danger" style="font-size:12px;padding:6px 14px" onclick="chronoStop()" id="btn-stop" disabled>⏹ Terminer</button>
             </div>
@@ -1185,7 +1185,7 @@ function formatChrono(s){
 
 const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 const JOURS=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
-const STATUT_LABEL={planifie:'Planifié',en_cours:'En cours',en_attente:'En attente',termine:'Terminé',annule:'Annulé',urgence:'🔴 Urgence',haute:'🟠 Haute',normale:'🟡 Normale',basse:'🟢 Basse'}
+const STATUT_LABEL={nouveau:'Nouveau',planifie:'Planifié',en_cours:'En cours',en_attente:'En attente',termine:'Terminé',annule:'Annulé',urgence:'🔴 Urgence',haute:'🟠 Haute',normale:'🟡 Normale',basse:'🟢 Basse'}
 
 async function init(){
   await Promise.all([loadBons(),loadTechs(),loadBats()])
@@ -1240,7 +1240,7 @@ function populateBatSelect(){
 
 function badge(v){
   const map={
-    planifie:'planifie',en_cours:'en_cours',en_attente:'en_attente',
+    nouveau:'nouveau',planifie:'planifie',en_cours:'en_cours',en_attente:'en_attente',
     termine:'termine',annule:'annule',
     urgence:'urgence',haute:'haute',normale:'normale',basse:'basse'
   }
@@ -1347,7 +1347,7 @@ function updateReopenBtn(statut){
 async function reopenBon(){
   if(!currentBonId) return
   if(!confirm('Réouvrir ce bon de travail ?')) return
-  await sb.from('bons_travail').update({statut:'planifie',date_fin:null,suppression_prevue:null}).eq('id',currentBonId)
+  await sb.from('bons_travail').update({statut:'nouveau',date_fin:null,suppression_prevue:null}).eq('id',currentBonId)
   await rafraichirTout()
   showToast('Bon réouvert !')
   await openDetail(currentBonId)
@@ -1483,9 +1483,18 @@ async function uploadPhotoLabeled(e,label){
 }
 
 function ouvrirAttente(){
-  document.getElementById('attente-auteur').value=''
   document.getElementById('attente-comment').value=''
   document.querySelectorAll('input[name="attente-raison"]').forEach(r=>r.checked=false)
+  // Pré-remplir nom
+  const attAuteur=document.getElementById('attente-auteur')
+  if(attAuteur&&attAuteur.value===''){
+    sb.auth.getUser().then(({data:{user}})=>{
+      if(user){
+        const parts=user.email.split('@')[0].split('.')
+        attAuteur.value=parts.length>=2?parts[0].charAt(0).toUpperCase()+parts[0].slice(1)+' '+parts[1].charAt(0).toUpperCase()+parts[1].slice(1):(user.user_metadata?.full_name||user.email)
+      }
+    })
+  }
   openModal('attente')
 }
 
@@ -1509,7 +1518,12 @@ async function confirmerAttente(){
   // Mettre à jour le badge statut
   document.getElementById('d-badges').innerHTML=badge('en_attente')+' '+badge(allBons.find(b=>b.id===currentBonId)?.priorite||'normale')
 
-  chronoPause()
+  // Arrêter le chrono proprement sans déclencher le modal de choix
+  clearInterval(chronoInterval);chronoRunning=false
+  document.getElementById('btn-start').disabled=false
+  document.getElementById('btn-start').textContent='▶ Reprendre'
+  document.getElementById('btn-pause').disabled=true
+  document.getElementById('btn-stop').disabled=true
   closeModal('attente')
   showToast('Bon mis en attente : '+raison)
 
@@ -1722,7 +1736,7 @@ async function createBon(){
   if(!titre) return
   const btn=document.getElementById('btn-create')
   btn.textContent='Création…';btn.disabled=true
-  const payload={titre,categorie:document.getElementById('f-cat').value,priorite:document.getElementById('f-prio').value,statut:'planifie',batiment_id:document.getElementById('f-bat').value||null,technicien_id:document.getElementById('f-tech').value||null,zone:document.getElementById('f-zone').value||null,date_prevue:document.getElementById('f-date').value||null,description:document.getElementById('f-desc').value||null}
+  const payload={titre,categorie:document.getElementById('f-cat').value,priorite:document.getElementById('f-prio').value,statut:'nouveau',batiment_id:document.getElementById('f-bat').value||null,technicien_id:document.getElementById('f-tech').value||null,zone:document.getElementById('f-zone').value||null,date_prevue:document.getElementById('f-date').value||null,description:document.getElementById('f-desc').value||null}
   const {data:newBon,error}=await sb.from('bons_travail').insert([payload]).select().single()
   if(!error&&newBon&&createPhotoFiles.length>0){
     for(const file of createPhotoFiles){
@@ -3062,6 +3076,73 @@ async function rafraichirTout(){
   await rafraichirTout()
 }
 
+
+// ── FLUX MISSION ──
+
+// Bouton "Planifier" - ouvre un mini modal date
+function ouvrirPlanifier(){
+  const dateStr = prompt('Date prévue d\'intervention (JJ/MM/AAAA) :')
+  if(!dateStr) return
+  const parts = dateStr.split('/')
+  if(parts.length!==3) return
+  const dateISO = parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0')
+  changeStatut('planifie')
+  sb.from('bons_travail').update({date_prevue:dateISO}).eq('id',currentBonId)
+}
+
+// Override chronoPause pour demander raison
+function chronoPause(){
+  if(!chronoRunning) return
+  clearInterval(chronoInterval);chronoRunning=false
+  document.getElementById('btn-start').disabled=false
+  document.getElementById('btn-start').textContent='▶ Reprendre'
+  document.getElementById('btn-pause').disabled=true
+  // Ouvrir modal en attente
+  ouvrirAttente()
+}
+
+// Override chronoStop pour proposer clôture ou attente
+function chronoStop(){
+  clearInterval(chronoInterval);chronoRunning=false
+  document.getElementById('btn-start').disabled=false
+  document.getElementById('btn-start').textContent='▶ Démarrer'
+  document.getElementById('btn-pause').disabled=true
+  document.getElementById('btn-stop').disabled=true
+  showChoixArretChrono()
+}
+
+// Quand on reprend après attente - relancer chrono et repasser en cours
+async function reprendreIntervention(){
+  if(!currentBonId) return
+  // Mise à jour optimiste
+  const bonIdx=allBons.findIndex(b=>b.id===currentBonId)
+  if(bonIdx!==-1) allBons[bonIdx]={...allBons[bonIdx],statut:'en_cours'}
+  document.querySelectorAll('.statut-btn').forEach(b=>b.classList.remove('active'))
+  const btnEl=document.getElementById('sb-en_cours')
+  if(btnEl) btnEl.classList.add('active')
+  document.getElementById('d-badges').innerHTML=badge('en_cours')+' '+badge(allBons.find(b=>b.id===currentBonId)?.priorite||'normale')
+  renderDashboard();renderBonsTable();updateUrgentBadge()
+  // Sauvegarder
+  await sb.from('bons_travail').update({statut:'en_cours'}).eq('id',currentBonId)
+  await rafraichirTout()
+  // Relancer chrono
+  chronoRunning=true
+  chronoStartTime=chronoStartTime||new Date()
+  chronoInterval=setInterval(()=>{chronoSeconds++;document.getElementById('chrono-display').textContent=formatChrono(chronoSeconds)},1000)
+  document.getElementById('btn-start').disabled=true
+  document.getElementById('btn-start').textContent='▶ En cours...'
+  document.getElementById('btn-pause').disabled=false
+  document.getElementById('btn-stop').disabled=false
+}
+
+function demarrerOuReprendre(){
+  const bon=allBons.find(b=>b.id===currentBonId)
+  if(bon&&bon.statut==='en_attente'){
+    reprendreIntervention()
+  } else {
+    ouvrirMission()
+  }
+}
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
 
 // ── FILTRE PAR BATIMENT ──
