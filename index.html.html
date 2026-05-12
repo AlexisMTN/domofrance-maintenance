@@ -1500,14 +1500,34 @@ async function confirmerAttente(){
   if(!raison){showToast('Veuillez choisir une raison','error');return}
   if(!auteur){showToast('Veuillez indiquer votre nom','error');return}
   if(!comment){showToast('Le commentaire est obligatoire','error');return}
+
   await sb.from('bons_travail').update({statut:'en_attente'}).eq('id',currentBonId)
-  const contenu='⏸️ Mise en attente — '+raison+'\n'+comment
+  const contenu='Mise en attente — '+raison+'\n'+comment
   await sb.from('commentaires').insert([{bon_id:currentBonId,auteur,contenu}])
-  await loadBons();renderDashboard();renderBonsTable()
+
+  // Mettre à jour visuellement IMMÉDIATEMENT sans rouvrir le modal
+  document.querySelectorAll('.statut-btn').forEach(b=>b.classList.remove('active'))
+  const btnEl=document.getElementById('sb-en_attente')
+  if(btnEl) btnEl.classList.add('active')
+
+  // Mettre à jour le badge statut
+  document.getElementById('d-badges').innerHTML=badge('en_attente')+' '+badge(allBons.find(b=>b.id===currentBonId)?.priorite||'normale')
+
+  chronoPause()
   closeModal('attente')
   showToast('Bon mis en attente : '+raison)
-  chronoPause()
-  await openDetail(currentBonId)
+
+  // Recharger en arrière-plan
+  await loadBons();renderDashboard();renderBonsTable()
+
+  // Recharger les commentaires dans le détail
+  const {data:comments}=await sb.from('commentaires').select('*').eq('bon_id',currentBonId).order('created_at')
+  document.getElementById('d-comments').innerHTML=(comments||[]).map(c=>{
+    return '<div style="display:flex;gap:10px;margin-bottom:12px">'
+    +'<div style="width:28px;height:28px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">'+c.auteur.slice(0,2).toUpperCase()+'</div>'
+    +'<div><span style="font-size:13px;font-weight:600">'+c.auteur+'</span> <span style="font-size:11px;color:var(--text3)">'+new Date(c.created_at).toLocaleString('fr-FR')+'</span>'
+    +'<div style="font-size:13px;color:var(--text2);margin-top:2px">'+c.contenu+'</div></div></div>'
+  }).join('')||'<div style="font-size:13px;color:var(--text3);margin-bottom:12px">Aucun commentaire</div>'
 }
 
 function ouvrirTerminer(){
