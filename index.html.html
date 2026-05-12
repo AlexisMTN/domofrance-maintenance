@@ -40,7 +40,15 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
 .stat-val{font-size:26px;font-weight:700;color:var(--text);line-height:1}
 .stat-label{font-size:12px;color:var(--text2);margin-top:3px}
 .badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;border-radius:6px;padding:3px 9px}
-.badge-urgence{background:var(--red-light);color:var(--red)}.badge-en_cours{background:var(--orange-light);color:var(--orange)}.badge-planifie{background:var(--blue-light);color:var(--blue)}.badge-en_attente{background:var(--yellow-light);color:var(--yellow)}.badge-termine{background:var(--green-light);color:var(--green)}.badge-annule{background:var(--gray2);color:var(--gray3)}
+.badge-urgence{background:var(--red-light);color:var(--red)}
+.badge-haute{background:#FBE9E7;color:#BF360C}
+.badge-normale{background:#E8EAF6;color:#3949AB}
+.badge-basse{background:var(--green-light);color:var(--green)}
+.badge-en_cours{background:var(--orange-light);color:var(--orange)}
+.badge-planifie{background:var(--blue-light);color:var(--blue)}
+.badge-en_attente{background:var(--yellow-light);color:var(--yellow)}
+.badge-termine{background:var(--green-light);color:var(--green)}
+.badge-annule{background:var(--gray2);color:var(--gray3)}
 .btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
 .btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-mid)}
 .btn-secondary{background:var(--gray2);color:var(--text2)}.btn-success{background:var(--green-light);color:var(--green)}.btn-danger{background:var(--red-light);color:var(--red)}.btn-warning{background:var(--yellow-light);color:var(--yellow)}.btn-orange{background:var(--orange-light);color:var(--orange)}
@@ -629,7 +637,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
       </div>
       <div class="form-group"><label class="form-label">Nom *</label><input class="form-input" id="b-nom" placeholder="Résidence Les Pins"></div>
       <div class="form-group"><label class="form-label">Adresse *</label><input class="form-input" id="b-adresse"></div>
-      <div class="form-group"><label class="form-label">Ville *</label><input class="form-input" id="b-ville"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Ville *</label><input class="form-input" id="b-ville"></div>
+        <div class="form-group"><label class="form-label">Code postal</label><input class="form-input" id="b-cp" placeholder="Ex: 33000" maxlength="5"></div>
+        <div class="form-group"><label class="form-label">Code postal *</label><input class="form-input" id="b-cp" placeholder="Ex: 33000" maxlength="5" pattern="[0-9]{5}"></div>
+      </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Statut occupation</label><select class="form-select" id="b-occupation"><option value="proprietaire">🏠 Propriétaire</option><option value="locataire">🔑 Locataire</option></select></div>
         <div class="form-group"><label class="form-label">Résidence Domofrance</label><select class="form-select" id="b-residence"><option value="true">✅ Oui</option><option value="false">❌ Non</option></select></div>
@@ -793,7 +805,7 @@ function formatChrono(s){
 
 const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 const JOURS=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
-const STATUT_LABEL={planifie:'Planifié',en_cours:'En cours',en_attente:'En attente',termine:'Terminé',annule:'Annulé',urgence:'Urgence'}
+const STATUT_LABEL={planifie:'Planifié',en_cours:'En cours',en_attente:'En attente',termine:'Terminé',annule:'Annulé',urgence:'🔴 Urgence',haute:'🟠 Haute',normale:'🟡 Normale',basse:'🟢 Basse'}
 
 async function init(){
   await Promise.all([loadBons(),loadTechs(),loadBats()])
@@ -840,7 +852,11 @@ function populateBatSelect(){
 }
 
 function badge(v){
-  const map={planifie:'planifie',en_cours:'en_cours',en_attente:'en_attente',termine:'termine',annule:'annule',urgence:'urgence',haute:'urgence',normale:'planifie',basse:'termine'}
+  const map={
+    planifie:'planifie',en_cours:'en_cours',en_attente:'en_attente',
+    termine:'termine',annule:'annule',
+    urgence:'urgence',haute:'haute',normale:'normale',basse:'basse'
+  }
   return '<span class="badge badge-'+(map[v]||'planifie')+'">'+(STATUT_LABEL[v]||v)+'</span>'
 }
 
@@ -853,7 +869,7 @@ function renderDashboard(){
   const sc={disponible:'#66BB6A',en_intervention:'#FFA726',hors_service:'#B0BEC5'}
   const sl={disponible:'Disponible',en_intervention:'En intervention',hors_service:'Hors service'}
   document.getElementById('dash-bons').innerHTML=allBons.slice(0,6).map(b=>{
-    const col=b.priorite==='urgence'?'#EF5350':b.statut==='en_cours'?'#FFA726':b.statut==='termine'?'#66BB6A':b.statut==='en_attente'?'#F9A825':'#42A5F5'
+    const col=b.priorite==='urgence'?'#DC0D4D':b.priorite==='haute'?'#E65100':b.statut==='en_cours'?'#FFA726':b.statut==='termine'?'#66BB6A':b.statut==='en_attente'?'#F9A825':b.statut==='planifie'?'#42A5F5':'#90A4AE'
     return '<div onclick="openDetail(\''+b.id+'\')" style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--gray2);cursor:pointer" onmouseover="this.style.background=\'var(--gray)\'" onmouseout="this.style.background=\'\'">'
     +'<div style="width:9px;height:9px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'
     +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+b.titre+'</div>'
@@ -1389,7 +1405,7 @@ function renderBatiments(){
     +'</div>'
     +'<div style="padding:14px 16px">'
     +'<div style="font-size:15px;font-weight:700;margin-bottom:2px">'+b.nom+'</div>'
-    +'<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'+b.adresse+', '+b.ville+'</div>'
+    +'<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'+b.adresse+', '+(b.code_postal||'')+' '+b.ville+'</div>'
     +(b.contact_nom?'<div style="font-size:12px;color:var(--text2);margin-bottom:8px">👤 '+b.contact_nom+(b.contact_role?' — '+b.contact_role:'')+'</div>':'')
     +(b.contact_telephone?'<div style="font-size:12px;margin-bottom:10px"><a href="tel:'+b.contact_telephone+'" style="color:var(--blue);font-weight:600" onclick="event.stopPropagation()">📞 '+b.contact_telephone+'</a></div>':'')
     +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center">'
@@ -1451,6 +1467,7 @@ function editBatiment(id){
   document.getElementById('b-nom').value=b.nom||''
   document.getElementById('b-adresse').value=b.adresse||''
   document.getElementById('b-ville').value=b.ville||''
+  document.getElementById('b-cp').value=b.code_postal||''
   document.getElementById('b-occupation').value=b.statut_occupation||'proprietaire'
   document.getElementById('b-residence').value=b.residence_propre?'true':'false'
   document.getElementById('b-contact-nom').value=b.contact_nom||''
@@ -1472,7 +1489,8 @@ async function saveBat(){
   const adresse=document.getElementById('b-adresse').value.trim()
   const ville=document.getElementById('b-ville').value.trim()
   if(!nom||!adresse||!ville){showToast('Nom, adresse et ville obligatoires','error');return}
-  const payload={nom,adresse,ville,statut_occupation:document.getElementById('b-occupation').value,residence_propre:document.getElementById('b-residence').value==='true',contact_nom:document.getElementById('b-contact-nom').value||null,contact_role:document.getElementById('b-contact-role').value||null,contact_telephone:document.getElementById('b-contact-tel').value||null,contact_email:document.getElementById('b-contact-email').value||null}
+  const cp=document.getElementById('b-cp').value.trim()
+  const payload={nom,adresse,ville,code_postal:cp||null,statut_occupation:document.getElementById('b-occupation').value,residence_propre:document.getElementById('b-residence').value==='true',contact_nom:document.getElementById('b-contact-nom').value||null,contact_role:document.getElementById('b-contact-role').value||null,contact_telephone:document.getElementById('b-contact-tel').value||null,contact_email:document.getElementById('b-contact-email').value||null}
   let batId=currentEditBatId
   if(batId){
     const {error}=await sb.from('batiments').update(payload).eq('id',batId)
@@ -1599,7 +1617,7 @@ async function initCarte(){
   for(const b of allBats){
     if(!b.adresse||!b.ville) continue
     try{
-      const addr=encodeURIComponent(b.adresse+', '+b.ville+', France')
+      const addr=encodeURIComponent(b.adresse+', '+(b.code_postal||'')+' '+b.ville+', France')
       const resp=await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+addr+'&limit=1')
       const data=await resp.json()
       if(!data||data.length===0) continue
