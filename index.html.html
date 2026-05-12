@@ -189,6 +189,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
       <div class="nav-item active" onclick="showPage('dashboard',this)">📊 Tableau de bord</div>
       <div class="nav-item" onclick="showPage('bons',this)">📋 Bons de travail <span class="nav-badge" id="urgent-badge" style="display:none">0</span></div>
       <div class="nav-item" onclick="showPage('planning',this)">📅 Planning</div>
+      <div class="nav-item" onclick="showPage('controle',this)">🛡️ Contrôle Réglementaire</div>
       <div class="nav-section">Gestion</div>
       <div class="nav-item" onclick="showPage('techniciens',this)">👷 Techniciens</div>
       <div class="nav-item" onclick="showPage('batiments',this)">🏢 Bâtiments</div>
@@ -285,6 +286,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
           </div>
           <div id="cal-grid"></div>
         </div>
+      </div>
+
+      <!-- CONTROLE REGLEMENTAIRE -->
+      <div class="page" id="page-controle">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+          <div style="font-size:13px;color:var(--text2)">Suivi des contrôles et vérifications réglementaires</div>
+          <button class="btn btn-primary" onclick="openModal('addControle')">+ Ajouter un contrôle</button>
+        </div>
+        <!-- Stats contrôles -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px" id="controle-stats"></div>
+        <!-- Liste contrôles -->
+        <div id="controle-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px"></div>
       </div>
 
       <!-- TECHNICIENS -->
@@ -630,6 +643,93 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('addTech')">Annuler</button>
       <button class="btn btn-primary" onclick="saveTech()">✓ Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONTROLE REGLEMENTAIRE -->
+<div class="modal-overlay" id="modal-addControle" style="display:none" onclick="if(event.target===this)closeModal('addControle')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head"><div class="modal-title" id="controle-modal-title">Nouveau contrôle réglementaire</div><button class="modal-close" onclick="closeModal('addControle')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Type de contrôle *</label>
+          <select class="form-select" id="ct-type" onchange="updateControleFreq()">
+            <option value="Contrôle incendie">🔥 Contrôle incendie</option>
+            <option value="Contrôle électrique">⚡ Contrôle électrique</option>
+            <option value="ERP - Sécurité">🏢 ERP - Sécurité</option>
+            <option value="Contrôle ascenseur">🛗 Contrôle ascenseur</option>
+            <option value="Contrôle gaz">💨 Contrôle gaz</option>
+            <option value="Vérification extincteurs">🧯 Vérification extincteurs</option>
+            <option value="Contrôle VMC">💨 Contrôle VMC / ventilation</option>
+            <option value="Diagnostic amiante">⚠️ Diagnostic amiante</option>
+            <option value="Diagnostic plomb">⚠️ Diagnostic plomb</option>
+            <option value="Contrôle toiture">🏠 Contrôle toiture</option>
+            <option value="Contrôle chaudière">🔥 Contrôle chaudière</option>
+            <option value="DTA - Dossier Technique Amiante">📋 DTA - Dossier Technique Amiante</option>
+            <option value="Autre">📋 Autre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bâtiment *</label>
+          <select class="form-select" id="ct-bat"><option value="">— Sélectionner —</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Organisme / Prestataire</label>
+          <input class="form-input" id="ct-organisme" placeholder="Ex: Socotec, Apave, Véritas...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fréquence</label>
+          <select class="form-select" id="ct-freq">
+            <option value="365">Annuel</option>
+            <option value="730">Tous les 2 ans</option>
+            <option value="1825">Tous les 5 ans</option>
+            <option value="3650">Tous les 10 ans</option>
+            <option value="180">Semestriel</option>
+            <option value="90">Trimestriel</option>
+            <option value="30">Mensuel</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Dernier contrôle effectué</label>
+          <input type="date" class="form-input" id="ct-last">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prochain contrôle prévu</label>
+          <input type="date" class="form-input" id="ct-next">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Résultat / Observations</label>
+        <select class="form-select" id="ct-resultat">
+          <option value="conforme">✅ Conforme</option>
+          <option value="conforme_reserves">⚠️ Conforme avec réserves</option>
+          <option value="non_conforme">❌ Non conforme</option>
+          <option value="en_attente">⏳ En attente de résultat</option>
+          <option value="a_planifier">📅 À planifier</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes / Observations</label>
+        <textarea class="form-textarea" id="ct-notes" placeholder="Observations, actions à mener..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">📎 Joindre le rapport (photo/scan)</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:10px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--blue);font-weight:600;background:var(--gray)">
+          📎 Ajouter le rapport
+          <input type="file" accept="image/*,application/pdf" style="display:none" id="ct-fichier" onchange="previewControleFichier(event)">
+        </label>
+        <div id="ct-fichier-preview" style="margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('addControle')">Annuler</button>
+      <button class="btn btn-primary" id="btn-save-controle" onclick="saveControle()">✓ Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1837,6 +1937,236 @@ async function confirmerSuppression(){
   showToast('Bon supprimé définitivement')
 }
 
+
+// ── CONTRÔLE RÉGLEMENTAIRE ──
+const CONTROLE_RESULTATS = {
+  conforme: {label:'✅ Conforme', color:'var(--green)', bg:'var(--green-light)'},
+  conforme_reserves: {label:'⚠️ Conforme avec réserves', color:'var(--yellow)', bg:'var(--yellow-light)'},
+  non_conforme: {label:'❌ Non conforme', color:'var(--red)', bg:'var(--red-light)'},
+  en_attente: {label:'⏳ En attente', color:'var(--text3)', bg:'var(--gray2)'},
+  a_planifier: {label:'📅 À planifier', color:'var(--blue)', bg:'var(--blue-light)'},
+}
+
+function getControles(){ try{return JSON.parse(localStorage.getItem('domofrance_controles')||'[]')}catch(e){return []} }
+function saveControles(list){ localStorage.setItem('domofrance_controles', JSON.stringify(list)) }
+
+function updateControleFreq(){
+  const type = document.getElementById('ct-type').value
+  const freq = document.getElementById('ct-freq')
+  if(!freq) return
+  const freqMap = {
+    'Contrôle incendie':'365','Contrôle électrique':'1825','ERP - Sécurité':'365',
+    'Contrôle ascenseur':'365','Contrôle gaz':'365','Vérification extincteurs':'365',
+    'Contrôle VMC':'730','Diagnostic amiante':'3650','Diagnostic plomb':'3650',
+    'Contrôle toiture':'1825','Contrôle chaudière':'365','DTA - Dossier Technique Amiante':'3650'
+  }
+  if(freqMap[type]) freq.value = freqMap[type]
+}
+
+function previewControleFichier(e){
+  const file = e.target.files[0]; if(!file) return
+  const preview = document.getElementById('ct-fichier-preview')
+  if(file.type.startsWith('image/')){
+    const url = URL.createObjectURL(file)
+    preview.innerHTML = '<img src="'+url+'" style="max-height:80px;border-radius:6px;border:1px solid var(--border)">'
+  } else {
+    preview.innerHTML = '<div style="font-size:12px;color:var(--green)">📎 '+file.name+'</div>'
+  }
+}
+
+function populateControleSelects(){
+  const batOpts = allBats.map(b=>'<option value="'+b.id+'">'+b.nom+'</option>').join('')
+  const ctBat = document.getElementById('ct-bat')
+  if(ctBat) ctBat.innerHTML = '<option value="">— Sélectionner —</option>'+batOpts
+}
+
+let currentEditControleId = null
+
+function saveControle(){
+  const type = document.getElementById('ct-type').value
+  const batId = document.getElementById('ct-bat').value
+  if(!type){showToast('Type obligatoire','error');return}
+
+  const controles = getControles()
+
+  // Upload fichier si présent
+  const fileInput = document.getElementById('ct-fichier')
+  const file = fileInput.files[0]
+  
+  const saveWithFile = (fileUrl) => {
+    const controle = {
+      id: currentEditControleId || Date.now().toString(),
+      type, batiment_id: batId||null,
+      organisme: document.getElementById('ct-organisme').value||null,
+      freq_days: parseInt(document.getElementById('ct-freq').value),
+      last_date: document.getElementById('ct-last').value||null,
+      next_date: document.getElementById('ct-next').value||null,
+      resultat: document.getElementById('ct-resultat').value,
+      notes: document.getElementById('ct-notes').value||null,
+      fichier_url: fileUrl||null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    if(currentEditControleId){
+      const idx = controles.findIndex(c=>c.id===currentEditControleId)
+      if(idx!==-1) controles[idx]={...controles[idx],...controle}
+    } else {
+      controles.push(controle)
+    }
+    saveControles(controles)
+    currentEditControleId = null
+    closeModal('addControle')
+    renderControles()
+    showToast(currentEditControleId?'Contrôle mis à jour !':'Contrôle enregistré !')
+  }
+
+  if(file){
+    const ext = file.name.split('.').pop()
+    const path = 'controles/'+Date.now()+'.'+ext
+    sb.storage.from('photos').upload(path, file).then(({error})=>{
+      if(!error){
+        const {data:{publicUrl}} = sb.storage.from('photos').getPublicUrl(path)
+        saveWithFile(publicUrl)
+      } else saveWithFile(null)
+    })
+  } else saveWithFile(null)
+}
+
+function getDaysUntil(dateStr){
+  if(!dateStr) return null
+  return Math.ceil((new Date(dateStr)-new Date())/(1000*60*60*24))
+}
+
+function renderControles(){
+  const controles = getControles()
+  const bat_filter = ''
+  
+  // Stats
+  const stats_el = document.getElementById('controle-stats')
+  if(stats_el){
+    const total = controles.length
+    const ok = controles.filter(c=>c.resultat==='conforme').length
+    const urgent = controles.filter(c=>{const d=getDaysUntil(c.next_date);return d!==null&&d<=30}).length
+    const nonConf = controles.filter(c=>c.resultat==='non_conforme').length
+    stats_el.innerHTML = [
+      {val:total, label:'Total contrôles', cls:'si-blue', icon:'🛡️'},
+      {val:ok, label:'Conformes', cls:'si-green', icon:'✅'},
+      {val:urgent, label:'Échéance < 30j', cls:'si-orange', icon:'⏰'},
+      {val:nonConf, label:'Non conformes', cls:'si-red', icon:'❌'},
+    ].map(s=>'<div class="stat-card"><div class="stat-icon '+s.cls+'" style="font-size:20px">'+s.icon+'</div><div><div class="stat-val">'+s.val+'</div><div class="stat-label">'+s.label+'</div></div></div>').join('')
+  }
+
+  const list = document.getElementById('controle-list')
+  if(!list) return
+
+  if(controles.length===0){
+    list.innerHTML='<div class="card" style="padding:40px;text-align:center;color:var(--text3);grid-column:1/-1">Aucun contrôle réglementaire — cliquez "+ Ajouter un contrôle"</div>'
+    return
+  }
+
+  // Trier par date prochaine
+  const sorted = [...controles].sort((a,b)=>{
+    const da = a.next_date?new Date(a.next_date):new Date('2099-01-01')
+    const db = b.next_date?new Date(b.next_date):new Date('2099-01-01')
+    return da-db
+  })
+
+  list.innerHTML = sorted.map(c=>{
+    const bat = allBats.find(b=>b.id===c.batiment_id)
+    const res = CONTROLE_RESULTATS[c.resultat]||CONTROLE_RESULTATS.a_planifier
+    const days = getDaysUntil(c.next_date)
+    let urgColor = 'var(--text3)', urgBg = 'var(--gray2)', urgText = 'Non renseigné'
+    if(days!==null){
+      if(days<0){ urgColor='var(--red)'; urgBg='var(--red-light)'; urgText='Dépassé de '+Math.abs(days)+' j' }
+      else if(days<=30){ urgColor='var(--orange)'; urgBg='var(--orange-light)'; urgText='Dans '+days+' j ⚠️' }
+      else if(days<=90){ urgColor='var(--yellow)'; urgBg='var(--yellow-light)'; urgText='Dans '+days+' j' }
+      else { urgColor='var(--green)'; urgBg='var(--green-light)'; urgText='Dans '+days+' j' }
+    }
+    return '<div class="card" style="padding:0;overflow:hidden">'
+      +'<div style="background:var(--navy);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">'
+      +'<div style="font-size:13px;font-weight:700;color:#fff">'+c.type+'</div>'
+      +'<span style="background:'+res.bg+';color:'+res.color+';font-size:10px;font-weight:700;border-radius:6px;padding:3px 8px">'+res.label+'</span>'
+      +'</div>'
+      +'<div style="padding:14px 16px">'
+      +(bat?'<div style="font-size:12px;color:var(--text2);margin-bottom:8px">🏢 '+bat.nom+'</div>':'')
+      +(c.organisme?'<div style="font-size:12px;color:var(--text2);margin-bottom:8px">🏗️ '+c.organisme+'</div>':'')
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">'
+      +(c.last_date?'<div style="background:var(--gray);border-radius:6px;padding:6px 8px"><div style="font-size:10px;color:var(--text3)">Dernier contrôle</div><div style="font-size:12px;font-weight:600">'+new Date(c.last_date).toLocaleDateString('fr-FR')+'</div></div>':'')
+      +(c.next_date?'<div style="background:'+urgBg+';border-radius:6px;padding:6px 8px"><div style="font-size:10px;color:'+urgColor+'">Prochain contrôle</div><div style="font-size:12px;font-weight:700;color:'+urgColor+'">'+new Date(c.next_date).toLocaleDateString('fr-FR')+'</div><div style="font-size:10px;color:'+urgColor+'">'+urgText+'</div></div>':'')
+      +'</div>'
+      +(c.notes?'<div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-style:italic">'+c.notes+'</div>':'')
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +(c.fichier_url?'<a href="'+c.fichier_url+'" target="_blank" class="btn btn-secondary" style="font-size:11px;padding:5px 10px">📎 Rapport</a>':'')
+      +'<button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="editControle(\''+c.id+'\')" >✏️ Modifier</button>'
+      +'<button class="btn btn-danger" style="font-size:11px;padding:5px 10px" onclick="deleteControle(\''+c.id+'\')" >🗑️ Supprimer</button>'
+      +'</div></div></div>'
+  }).join('')
+}
+
+function editControle(id){
+  const c = getControles().find(x=>x.id===id); if(!c) return
+  currentEditControleId = id
+  document.getElementById('controle-modal-title').textContent = 'Modifier le contrôle'
+  document.getElementById('ct-type').value = c.type||''
+  document.getElementById('ct-bat').value = c.batiment_id||''
+  document.getElementById('ct-organisme').value = c.organisme||''
+  document.getElementById('ct-freq').value = c.freq_days||365
+  document.getElementById('ct-last').value = c.last_date||''
+  document.getElementById('ct-next').value = c.next_date||''
+  document.getElementById('ct-resultat').value = c.resultat||'a_planifier'
+  document.getElementById('ct-notes').value = c.notes||''
+  document.getElementById('ct-fichier-preview').innerHTML = c.fichier_url?'<div style="font-size:12px;color:var(--green)">📎 Rapport existant</div>':''
+  openModal('addControle')
+}
+
+function deleteControle(id){
+  if(!confirm('Supprimer ce contrôle ?')) return
+  const controles = getControles().filter(c=>c.id!==id)
+  saveControles(controles)
+  renderControles()
+  showToast('Contrôle supprimé')
+}
+
+// Override showPage pour contrôle
+const _origShowPage = showPage
+function showPage(name, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
+  document.getElementById('page-'+name)?.classList.add('active')
+  const pt={dashboard:'Tableau de bord',bons:'Bons de travail',planning:'Planning',controle:'Contrôle Réglementaire',techniciens:'Techniciens',batiments:'Bâtiments',stats:'Statistiques',historique:'Historique',carte:'Carte des bâtiments'}
+  document.getElementById('page-title').textContent=pt[name]||name
+  if(el) el.classList.add('active')
+  closeSidebar()
+  if(name==='bons'){renderBonsTable();populateFilterBat()}
+  if(name==='techniciens') renderTechs()
+  if(name==='batiments') renderBatiments()
+  if(name==='stats') renderStats()
+  if(name==='historique') renderHistorique()
+  if(name==='carte') setTimeout(()=>{const m=document.getElementById('map');if(m)m.style.height='480px';initCarte()},200)
+  if(name==='controle'){populateControleSelects();renderControles()}
+}
+
+// Override openModal pour contrôle
+const _origOpenModal = openModal
+function openModal(id){
+  document.getElementById('modal-'+id).style.display='flex'
+  if(id==='addControle'){
+    populateControleSelects()
+    if(!currentEditControleId){
+      document.getElementById('controle-modal-title').textContent='Nouveau contrôle réglementaire'
+      document.getElementById('ct-type').value='Contrôle incendie'
+      document.getElementById('ct-bat').value=''
+      document.getElementById('ct-organisme').value=''
+      document.getElementById('ct-freq').value='365'
+      document.getElementById('ct-last').value=''
+      document.getElementById('ct-next').value=''
+      document.getElementById('ct-resultat').value='a_planifier'
+      document.getElementById('ct-notes').value=''
+      document.getElementById('ct-fichier-preview').innerHTML=''
+    }
+  }
+}
+
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
 
 // ── FILTRE PAR BATIMENT ──
@@ -2198,17 +2528,7 @@ async function init(){
 }
 
 // Bouton récurrence dans page bons
-document.addEventListener('DOMContentLoaded',()=>{
-  const bonsTitre=document.querySelector('#page-bons .filter-tab')
-  if(bonsTitre){
-    const recBtn=document.createElement('button')
-    recBtn.className='btn btn-secondary'
-    recBtn.style.cssText='padding:7px 14px;font-size:13px;margin-left:8px'
-    recBtn.textContent='🔄 Récurrences'
-    recBtn.onclick=()=>{populateRecurrenceSelects();openModal('recurrence')}
-    bonsTitre.parentElement.parentElement.insertBefore(recBtn,bonsTitre.parentElement.nextSibling)
-  }
-})
+// Récurrences supprimées
 
 </script>
 </body>
