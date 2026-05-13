@@ -2015,7 +2015,7 @@ function showPage(name,el){
   document.getElementById('page-title').textContent=pageTitles[name]||name
   if(el) el.classList.add('active')
   closeSidebar()
-  if(name==='bons') renderBonsTable()
+  if(name==='bons'){loadBons().then(()=>{renderBonsTable();populateFilterBat()})}
   if(name==='techniciens') renderTechs()
   if(name==='batiments') renderBatiments()
   if(name==='stats'){renderStats();setTimeout(renderStatsCouts,100)}
