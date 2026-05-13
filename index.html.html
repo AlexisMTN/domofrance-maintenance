@@ -2008,7 +2008,7 @@ function calNav(dir){calDate=new Date(calDate.getFullYear(),calDate.getMonth()+d
 function calToday(){calDate=new Date();renderCalendar()}
 
 const pageTitles={dashboard:'Tableau de bord',bons:'Bons de travail',planning:'Planning',techniciens:'Techniciens',batiments:'Bâtiments',stats:'Statistiques'}
-function showPage(name,el){
+async function showPage(name,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
   document.getElementById('page-'+name).classList.add('active')
@@ -2017,14 +2017,12 @@ function showPage(name,el){
   closeSidebar()
   if(name==='bons'){
     currentFilter='all'
-    loadBons().then(()=>{
-      populateFilterBat()
-      renderBonsTable()
-      // Remettre le tab "Tous" actif
-      document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'))
-      const allTab=document.querySelector('.filter-tab[onclick*="all"]')
-      if(allTab) allTab.classList.add('active')
-    })
+    document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'))
+    const allTab=document.querySelector('.filter-tab[onclick*="all"]')
+    if(allTab) allTab.classList.add('active')
+    await loadBons()
+    populateFilterBat()
+    renderBonsTable()
   }
   if(name==='techniciens') renderTechs()
   if(name==='batiments') renderBatiments()
