@@ -1764,17 +1764,27 @@ async function saveTech(){
     prenom,nom,email,
     telephone:document.getElementById('t-tel').value||null,
     specialite:document.getElementById('t-spec').value,
-    statut:'disponible',
     taux_horaire:parseFloat(document.getElementById('t-taux').value)||0,
     assurance_mensuelle:parseFloat(document.getElementById('t-assurance').value)||0,
     maintenance_mensuelle:parseFloat(document.getElementById('t-maintenance').value)||0,
-    vehicule_conso:parseFloat(document.getElementById('t-conso').value)||10,
+    vehicule_conso:parseFloat(document.getElementById('t-conso').value)||0,
     vehicule_modele:document.getElementById('t-vehicule').value||null,
     vehicule_motorisation:document.getElementById('t-motorisation').value||'diesel',
   }
-  const {error}=await sb.from('techniciens').insert([payload])
-  if(!error){showToast('Technicien ajouté !');closeModal('addTech');await loadTechs();renderTechs()}
-  else showToast(error.message,'error')
+  let error
+  if(currentEditTechId){
+    // Modification
+    const res=await sb.from('techniciens').update(payload).eq('id',currentEditTechId)
+    error=res.error
+    if(!error){showToast('Technicien mis à jour !');currentEditTechId=null;closeModal('addTech');await loadTechs();renderTechs()}
+  } else {
+    // Création
+    payload.statut='disponible'
+    const res=await sb.from('techniciens').insert([payload])
+    error=res.error
+    if(!error){showToast('Technicien ajouté !');closeModal('addTech');await loadTechs();renderTechs()}
+  }
+  if(error) showToast(error.message,'error')
 }
 
 function renderTechs(){
@@ -3067,9 +3077,9 @@ function editTech(id){
   document.getElementById('t-taux').value = t.taux_horaire||''
   document.getElementById('t-assurance').value = t.assurance_mensuelle||''
   document.getElementById('t-maintenance').value = t.maintenance_mensuelle||''
-  document.getElementById('t-conso').value = t.conso_100km||''
-  document.getElementById('t-vehicule').value = t.vehicule||''
-  document.getElementById('t-motorisation').value = t.motorisation||'diesel'
+  document.getElementById('t-conso').value = t.vehicule_conso||''
+  document.getElementById('t-vehicule').value = t.vehicule_modele||''
+  document.getElementById('t-motorisation').value = t.vehicule_motorisation||'diesel'
   openModal('addTech')
 }
 
