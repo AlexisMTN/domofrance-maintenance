@@ -191,7 +191,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
       <div class="nav-item active" onclick="showPage('dashboard',this)">📊 Tableau de bord</div>
       <div class="nav-item" onclick="showPage('bons',this)">📋 Bons de travail <span class="nav-badge" id="urgent-badge" style="display:none">0</span></div>
       <div class="nav-item" onclick="showPage('mes-tickets',this)">👤 Mes tickets</div>
-      <div class="nav-item" onclick="showPage('mes-tickets',this)">👤 Mes tickets</div>
+      
       <div class="nav-item" onclick="showPage('planning',this)">📅 Planning</div>
       <div class="nav-item" onclick="showPage('controle',this)">🛡️ Contrôle Réglementaire</div>
       <div class="nav-section">Gestion</div>
@@ -366,21 +366,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
       </div>
 
       <!-- CARTE -->
-      <div class="page" id="page-carte">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-          <div style="font-size:13px;color:var(--text2)">Localisation de vos résidences et interventions actives</div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap">
-            <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:#DC0D4D;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.3)"></span>Urgence</span>
-            <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:#E65100;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.3)"></span>En cours</span>
-            <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:#183960;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.3)"></span>Normal</span>
-          </div>
-        </div>
-        <div class="card" style="overflow:hidden;margin-bottom:16px">
-          <div id="map" style="height:480px;width:100%;min-height:480px"></div>
-        </div>
-        <div id="carte-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px"></div>
-      </div>
-
+      
       <!-- HISTORIQUE -->
       <div class="page" id="page-historique">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
@@ -2502,8 +2488,8 @@ function showPage(name, el){
   if(name==='stats'){renderStats();setTimeout(renderStatsCouts,100)}
   if(name==='historique') renderHistorique()
   if(name==='carte') setTimeout(()=>{const m=document.getElementById('map');if(m)m.style.height='480px';initCarte()},200)
-  if(name==='mes-tickets') renderMesTickets()
-  if(name==='mes-tickets') renderMesTickets()
+  if(name==='mes-tickets'){el.innerHTML='<div style="padding:20px;text-align:center">Chargement...</div>';renderMesTickets()}
+  if(name==='mes-tickets'){el.innerHTML='<div style="padding:20px;text-align:center">Chargement...</div>';renderMesTickets()}
   if(name==='controle'){populateControleSelects();renderControles()}
 }
 
@@ -3158,14 +3144,19 @@ function demarrerOuReprendre(){
 async function renderMesTickets(){
   const el = document.getElementById('mes-tickets-content')
   if(!el) return
+  // Recharger les données fraîches
+  await loadBons()
+  await loadTechs()
   const {data:{user}} = await sb.auth.getUser()
   if(!user){ el.innerHTML='<div style="color:var(--text3);padding:20px">Non connecté</div>'; return }
-  const tech = allTechs.find(t=>t.email===user.email)
+  // Chercher le technicien par email (insensible à la casse)
+  const tech = allTechs.find(t=>t.email&&t.email.toLowerCase()===user.email.toLowerCase())
   let bonsEnCours, bonsEnAttente
   if(tech){
     bonsEnCours = allBons.filter(b=>b.technicien_id===tech.id && b.statut==='en_cours')
     bonsEnAttente = allBons.filter(b=>b.technicien_id===tech.id && b.statut==='en_attente')
   } else {
+    // Pas de fiche technicien : afficher tous les bons actifs
     bonsEnCours = allBons.filter(b=>b.statut==='en_cours')
     bonsEnAttente = allBons.filter(b=>b.statut==='en_attente')
   }
