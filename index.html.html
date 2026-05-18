@@ -1090,6 +1090,7 @@ sb.auth.onAuthStateChange((event,session)=>{
 
 // ── DATA ──
 let allBons=[], allTechs=[], allBats=[], bonPhotos={}
+let recurrences=[]
 let currentFilter='all', currentBonId=null, currentBatId=null, currentEditBatId=null, createPhotoFiles=[]
 let calDate=new Date()
 let signatureData=null
@@ -3219,7 +3220,6 @@ async function renderMesMissions(){
 
 
 async 
-async 
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
 
@@ -3495,7 +3495,6 @@ async function doConfirmerTerminer(){
 }
 
 // ── RÉCURRENCES ──
-let recurrences=[]
 
 async function loadRecurrences(){
   const stored=localStorage.getItem('domofrance_recurrences')
