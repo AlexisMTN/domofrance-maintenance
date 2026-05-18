@@ -3179,86 +3179,86 @@ function demarrerOuReprendre(){
 async function renderMesTickets(){
   const el = document.getElementById('mes-tickets-content')
   if(!el) return
-  el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">Chargement...</div>'
-  try{
-  // Recharger les données fraîches
+  el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Chargement...</div>'
+
   await loadBons()
   await loadTechs()
+
   const {data:{user}} = await sb.auth.getUser()
   if(!user){ el.innerHTML='<div style="color:var(--text3);padding:20px">Non connecté</div>'; return }
-  // Chercher le technicien par email (insensible à la casse)
+
   const tech = allTechs.find(t=>t.email&&t.email.toLowerCase()===user.email.toLowerCase())
-  let bonsEnCours, bonsEnAttente
-  if(tech){
-    bonsEnCours = allBons.filter(b=>b.technicien_id===tech.id && b.statut==='en_cours')
-    bonsEnAttente = allBons.filter(b=>b.technicien_id===tech.id && b.statut==='en_attente')
-  } else {
-    // Pas de fiche technicien : afficher tous les bons actifs
-    bonsEnCours = allBons.filter(b=>b.statut==='en_cours')
-    bonsEnAttente = allBons.filter(b=>b.statut==='en_attente')
-  }
-  const totalActifs = bonsEnCours.length + bonsEnAttente.length
   const nom = tech ? tech.prenom+' '+tech.nom : user.email.split('@')[0]
-  const initiales = nom.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
+  const initiales = nom.split(' ').map(n=>n[0]||'').join('').toUpperCase().slice(0,2)||'?'
+
+  const bonsEnCours = tech
+    ? allBons.filter(b=>b.technicien_id===tech.id && b.statut==='en_cours')
+    : allBons.filter(b=>b.statut==='en_cours')
+
+  const bonsEnAttente = tech
+    ? allBons.filter(b=>b.technicien_id===tech.id && b.statut==='en_attente')
+    : allBons.filter(b=>b.statut==='en_attente')
+
+  const total = bonsEnCours.length + bonsEnAttente.length
 
   let html = '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding:16px 20px;background:var(--navy);border-radius:12px">'
-    +'<div style="width:50px;height:50px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0">'+initiales+'</div>'
-    +'<div><div style="font-size:16px;font-weight:700;color:#fff">'+nom+'</div>'
-    +(tech?'<div style="font-size:12px;color:rgba(255,255,255,.6)">'+tech.specialite+'</div>':'')
-    +'</div><div style="margin-left:auto;text-align:right"><div style="font-size:24px;font-weight:700;color:#fff">'+totalActifs+'</div><div style="font-size:11px;color:rgba(255,255,255,.6)">mission(s) active(s)</div></div></div>'
+    + '<div style="width:46px;height:46px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">'+initiales+'</div>'
+    + '<div><div style="font-size:15px;font-weight:700;color:#fff">'+nom+'</div>'
+    + (tech ? '<div style="font-size:12px;color:rgba(255,255,255,.6)">'+tech.specialite+'</div>' : '')
+    + '</div><div style="margin-left:auto;text-align:right">'
+    + '<div style="font-size:22px;font-weight:700;color:#fff">'+total+'</div>'
+    + '<div style="font-size:11px;color:rgba(255,255,255,.6)">mission(s) active(s)</div>'
+    + '</div></div>'
 
-  if(bonsEnCours.length > 0){
-    html += '<div style="font-size:13px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">En cours ('+bonsEnCours.length+')</div>'
-    bonsEnCours.forEach(b=>{
-      const bat = allBats.find(x=>x.id===b.batiment_id)
-      const duree = b.date_debut ? Math.floor((new Date()-new Date(b.date_debut))/1000/60) : 0
-      const dureeText = duree < 60 ? duree+'min' : Math.floor(duree/60)+'h'+String(duree%60).padStart(2,'0')
-      html += '<div class="card" data-id="'+b.id+'" style="padding:0;overflow:hidden;margin-bottom:12px;border-left:4px solid var(--orange)">'
-        +'<div style="padding:14px 16px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
-        +'<div style="cursor:pointer" data-bon-id="'+b.id+'" onclick="openDetail(this.getAttribute(\"data-bon-id\"))"><div style="font-size:14px;font-weight:700">'+b.titre+'</div>'
-        +'<div style="font-size:12px;color:var(--text3);margin-top:2px">'+(bat?'🏢 '+bat.nom+(b.zone?' - '+b.zone:''):'—')+'</div></div>'
-        +badge(b.priorite)
-        +'</div>'
-        +'<div style="display:flex;align-items:center;justify-content:space-between">'
-        +'<div style="font-size:12px;color:var(--text2)">En cours depuis <strong>'+dureeText+'</strong></div>'
-        +'<button class="btn btn-warning" style="font-size:11px;padding:5px 10px" onclick="ouvrirAttenteForBon(\''+b.id+'\')" >Pause</button>'
-        +'</div></div></div>'
-    })
-  }
+  bonsEnCours.forEach((b,i)=>{
+    const bat = allBats.find(x=>x.id===b.batiment_id)
+    const mins = b.date_debut ? Math.floor((Date.now()-new Date(b.date_debut))/60000) : 0
+    const duree = mins < 60 ? mins+'min' : Math.floor(mins/60)+'h'+String(mins%60).padStart(2,'0')
+    if(i===0) html += '<div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;margin-bottom:8px">En cours ('+bonsEnCours.length+')</div>'
+    html += '<div class="card" style="padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--orange)">'
+      + '<div style="font-size:14px;font-weight:700;margin-bottom:4px;cursor:pointer" onclick="openDetail(allBons['+allBons.indexOf(b)+'].id)">'+b.titre+'</div>'
+      + '<div style="font-size:12px;color:var(--text3);margin-bottom:10px">'+(bat ? bat.nom : '—')+'</div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between">'
+      + '<div style="font-size:12px;color:var(--text2)">En cours depuis <strong>'+duree+'</strong></div>'
+      + '<button class="btn btn-warning" style="font-size:11px;padding:5px 10px" onclick="ouvrirAttenteForBon(allBons['+allBons.indexOf(b)+'].id)">Pause</button>'
+      + '</div></div>'
+  })
 
-  if(bonsEnAttente.length > 0){
-    html += '<div style="font-size:13px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px">En attente ('+bonsEnAttente.length+')</div>'
-    bonsEnAttente.forEach(b=>{
-      const bat = allBats.find(x=>x.id===b.batiment_id)
-      html += '<div class="card" style="padding:0;overflow:hidden;margin-bottom:12px;border-left:4px solid var(--yellow)">'
-        +'<div style="padding:14px 16px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
-        +'<div style="cursor:pointer" data-bon-id="'+b.id+'" onclick="openDetail(this.getAttribute(\"data-bon-id\"))"><div style="font-size:14px;font-weight:700">'+b.titre+'</div>'
-        +'<div style="font-size:12px;color:var(--text3);margin-top:2px">'+(bat?'🏢 '+bat.nom+(b.zone?' - '+b.zone:''):'—')+'</div></div>'
-        +'<span style="background:var(--yellow-light);color:var(--yellow);font-size:10px;font-weight:700;border-radius:6px;padding:3px 8px">En attente</span>'
-        +'</div>'
-        +'<div style="display:flex;align-items:center;justify-content:space-between">'
-        +'<div style="font-size:12px;color:var(--text2)">Mis à jour le '+new Date(b.updated_at||b.created_at).toLocaleDateString('fr-FR')+'</div>'
-        +'<button class="btn btn-orange" style="font-size:11px;padding:5px 10px" onclick="reprendreForBon(\''+b.id+'\')" >Reprendre</button>'
-        +'</div></div></div>'
-    })
-  }
+  bonsEnAttente.forEach((b,i)=>{
+    const bat = allBats.find(x=>x.id===b.batiment_id)
+    if(i===0) html += '<div style="font-size:12px;font-weight:700;color:var(--yellow);text-transform:uppercase;margin:14px 0 8px">En attente ('+bonsEnAttente.length+')</div>'
+    html += '<div class="card" style="padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--yellow)">'
+      + '<div style="font-size:14px;font-weight:700;margin-bottom:4px;cursor:pointer" onclick="openDetail(allBons['+allBons.indexOf(b)+'].id)">'+b.titre+'</div>'
+      + '<div style="font-size:12px;color:var(--text3);margin-bottom:10px">'+(bat ? bat.nom : '—')+'</div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between">'
+      + '<div style="font-size:12px;color:var(--text2)">Mis à jour le '+new Date(b.updated_at||b.created_at).toLocaleDateString('fr-FR')+'</div>'
+      + '<button class="btn btn-orange" style="font-size:11px;padding:5px 10px" onclick="reprendreForBon(allBons['+allBons.indexOf(b)+'].id)">Reprendre</button>'
+      + '</div></div>'
+  })
 
-  if(totalActifs === 0){
+  if(total === 0){
     html += '<div class="card" style="padding:40px;text-align:center">'
-      +'<div style="font-size:40px;margin-bottom:12px">✅</div>'
-      +'<div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:6px">Aucune mission active</div>'
-      +'<div style="font-size:13px;color:var(--text3)">Vous n\'avez pas de bon en cours ou en attente</div>'
-      +'</div>'
+      + '<div style="font-size:40px;margin-bottom:12px">&#x2705;</div>'
+      + '<div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:6px">Aucune mission active</div>'
+      + '<div style="font-size:13px;color:var(--text3)">Pas de bon en cours ou en attente</div>'
+      + '</div>'
   }
 
   el.innerHTML = html
-  }catch(e){
-    el.innerHTML='<div style="padding:20px;color:red">Erreur: '+e.message+'</div>'
-    console.error('renderMesTickets error:',e)
-  }
+
+  // Attacher les événements après insertion du HTML
+  el.querySelectorAll('[data-action="open"]').forEach(el2=>{
+    el2.addEventListener('click', ()=>openDetail(el2.dataset.id))
+  })
+  el.querySelectorAll('[data-action="pause"]').forEach(el2=>{
+    el2.addEventListener('click', (e)=>{e.stopPropagation();ouvrirAttenteForBon(el2.dataset.id)})
+  })
+  el.querySelectorAll('[data-action="reprendre"]').forEach(el2=>{
+    el2.addEventListener('click', (e)=>{e.stopPropagation();reprendreForBon(el2.dataset.id)})
+  })
 }
+
+
 
 function ouvrirAttenteForBon(id){currentBonId=id;ouvrirAttente()}
 function reprendreForBon(id){currentBonId=id;reprendreIntervention()}
