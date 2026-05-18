@@ -1120,30 +1120,9 @@ function chronoStart(){
   }
 }
 
-function chronoPause(){
-  if(!chronoRunning) return
-  clearInterval(chronoInterval);chronoRunning=false
-  document.getElementById('btn-start').disabled=false
-  document.getElementById('btn-start').textContent='▶ Reprendre'
-  document.getElementById('btn-pause').disabled=true
-  if(currentBonId) sb.from('bons_travail').update({statut:'en_attente'}).eq('id',currentBonId).then(()=>{loadBons();renderDashboard();renderBonsTable()})
-}
 
-function chronoStop(){
-  clearInterval(chronoInterval);chronoRunning=false
-  document.getElementById('btn-start').disabled=false
-  document.getElementById('btn-start').textContent='▶ Démarrer'
-  document.getElementById('btn-pause').disabled=true
-  document.getElementById('btn-stop').disabled=true
-  // Demander si terminer ou mettre en attente
-  if(currentBonId){
-    const bon=allBons.find(b=>b.id===currentBonId)
-    if(bon&&bon.statut==='en_cours'){
-      // Afficher choix
-      showChoixArretChrono()
-    }
-  }
-}
+
+
 
 function showChoixArretChrono(){
   // Créer un mini modal de choix
@@ -1555,13 +1534,7 @@ async function confirmerAttente(){
   }).join('')||'<div style="font-size:13px;color:var(--text3);margin-bottom:12px">Aucun commentaire</div>'
 }
 
-function ouvrirTerminer(){
-  document.getElementById('terminer-auteur').value=''
-  document.getElementById('terminer-comment').value=''
-  document.getElementById('terminer-photo-preview').innerHTML=''
-  document.getElementById('terminer-photo').value=''
-  openModal('terminer')
-}
+
 
 function previewTerminerPhoto(e){
   const file=e.target.files[0];if(!file) return
