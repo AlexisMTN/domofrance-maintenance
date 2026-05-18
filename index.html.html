@@ -1771,7 +1771,14 @@ async function createBon(){
     // Notifier si technicien assigné
     if(payload.technicien_id){
       const tech=allTechs.find(t=>t.id===payload.technicien_id)
-      if(tech&&newBon) notifierAssignation(newBon,tech.prenom+' '+tech.nom)
+      if(tech&&newBon){
+        notifierAssignation(newBon,tech.prenom+' '+tech.nom)
+        // Notification push au technicien assigné
+        envoyerNotificationPush([tech.email],
+          'Mission assignée — '+newBon.titre,
+          'Vous avez été assigné à une intervention'+(payload.batiment_id?' chez '+(allBats.find(b=>b.id===payload.batiment_id)?.nom||''):'')
+        )
+      }
     }
   } else showToast('Erreur: '+error.message,'error')
 }
@@ -3220,6 +3227,66 @@ async function renderMesMissions(){
   el.innerHTML=''
   rows.forEach(r=>el.appendChild(r))
 }
+
+
+// ── NOTIFICATIONS PUSH ──
+const VAPID_PUBLIC_KEY = 'BCcAMfdPtdsGKs82O-SrTfNGVWMexkQOZVxp-KhmY7lRONoXw3J1xDuaPNeIT6wiTeFGVYFFB28AVClEonF-k40'
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = window.atob(base64)
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
+}
+
+async function activerNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    showToast('Notifications non supportées sur ce navigateur', 'error')
+    return
+  }
+  try {
+    const perm = await Notification.requestPermission()
+    if (perm !== 'granted') { showToast('Notifications refusées', 'error'); return }
+    const reg = await navigator.serviceWorker.ready
+    let sub = await reg.pushManager.getSubscription()
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      })
+    }
+    // Sauvegarder la subscription dans Supabase
+    const {data:{user}} = await sb.auth.getUser()
+    if (user) {
+      await sb.from('push_subscriptions').upsert({
+        user_id: user.id,
+        email: user.email,
+        subscription: JSON.stringify(sub)
+      }, { onConflict: 'email' })
+    }
+    showToast('🔔 Notifications activées !')
+  } catch(e) {
+    console.error('Push error:', e)
+    showToast('Erreur activation notifications', 'error')
+  }
+}
+
+async function envoyerNotificationPush(emails, title, body) {
+  try {
+    const { data: subs } = await sb.from('push_subscriptions')
+      .select('subscription').in('email', emails)
+    if (!subs || subs.length === 0) return
+    for (const row of subs) {
+      const sub = JSON.parse(row.subscription)
+      await fetch(SUPABASE_URL + '/functions/v1/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
+        body: JSON.stringify({ subscription: sub, title, body })
+      })
+    }
+  } catch(e) { console.error('Push notification error:', e) }
+}
+
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
 
