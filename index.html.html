@@ -3485,10 +3485,20 @@ async function doConfirmerTerminer(){
   showToast('Génération du PDF…')
   try{ await genererEtEnvoyerPDF(bon,photos||[],comments||[],auteur,dureeH) }catch(e){ console.error('PDF:',e) }
 
-  chronoStop()
+  // Arrêter le chrono sans déclencher le modal de choix
+  clearInterval(chronoInterval)
+  chronoRunning=false
+  chronoSeconds=0
+  chronoStartTime=null
+
+  // Fermer tous les modals et revenir à la liste
+  closeModal('signature')
+  closeModal('terminer')
+  closeModal('detail')
+
   await loadBons();await loadBonPhotos();renderDashboard();renderBonsTable()
-  closeModal('terminer');closeModal('detail')
-  showToast('✅ Bon clôturé ! PDF téléchargé.')
+  showPage('bons', document.querySelectorAll('.nav-item')[1])
+  showToast('Bon cloture ! PDF telecharge.')
 }
 
 // ── RÉCURRENCES ──
