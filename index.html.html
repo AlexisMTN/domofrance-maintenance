@@ -1092,6 +1092,9 @@ sb.auth.onAuthStateChange((event,session)=>{
 let allBons=[], allTechs=[], allBats=[], bonPhotos={}
 let currentFilter='all', currentBonId=null, currentBatId=null, currentEditBatId=null, createPhotoFiles=[]
 let calDate=new Date()
+let signatureData=null
+let signatureDrawing=false
+let signatureLastX=0,signatureLastY=0
 
 // ── CHRONO ──
 let chronoInterval=null, chronoSeconds=0, chronoRunning=false, chronoStartTime=null
@@ -3361,9 +3364,7 @@ function renderHistorique(){
 }
 
 // ── SIGNATURE ──
-let signatureData=null
-let signatureDrawing=false
-let signatureLastX=0,signatureLastY=0
+
 
 function initSignatureCanvas(){
   const canvas=document.getElementById('signature-canvas')
