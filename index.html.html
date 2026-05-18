@@ -386,7 +386,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
   <button class="mobile-nav-item active" onclick="showPage('dashboard',this);setMobileNav(this)"><span>📊</span>Accueil</button>
   <button class="mobile-nav-item" onclick="showPage('bons',this);setMobileNav(this)"><span>📋</span>Bons</button>
   <button class="mobile-nav-item" onclick="openModal('create')"><span style="background:var(--blue);color:#fff;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:2px">+</span>Créer</button>
-  <button class="mobile-nav-item" onclick="showPage('mes-tickets',this);setMobileNav(this)"><span>👤</span>Mes tickets</button>
   <button class="mobile-nav-item" onclick="showPage('techniciens',this);setMobileNav(this)"><span>👷</span>Équipe</button>
   <button class="mobile-nav-item" onclick="showPage('batiments',this);setMobileNav(this)"><span>🏢</span>Sites</button>
 </nav>
@@ -2521,8 +2520,6 @@ function showPage(name, el){
   if(name==='stats'){renderStats();setTimeout(renderStatsCouts,100)}
   if(name==='historique') renderHistorique()
   if(name==='carte') setTimeout(()=>{const m=document.getElementById('map');if(m)m.style.height='480px';initCarte()},200)
-  if(name==='mes-tickets'){el.innerHTML='<div style="padding:20px;text-align:center">Chargement...</div>';renderMesTickets()}
-  if(name==='mes-tickets'){el.innerHTML='<div style="padding:20px;text-align:center">Chargement...</div>';renderMesTickets()}
   if(name==='controle'){populateControleSelects();renderControles()}
 }
 
