@@ -1504,7 +1504,7 @@ async function confirmerAttente(){
   if(!comment){showToast('Le commentaire est obligatoire','error');return}
 
   await sb.from('bons_travail').update({statut:'en_attente'}).eq('id',currentBonId)
-  const contenu='Mise en attente — '+raison+'\n'+comment
+  const contenu='Mise en attente - '+raison+'\n'+comment
   await sb.from('commentaires').insert([{bon_id:currentBonId,auteur,contenu}])
 
   // Mettre à jour visuellement IMMÉDIATEMENT sans rouvrir le modal
@@ -1650,7 +1650,7 @@ async function genererEtEnvoyerPDF(bon,photos,comments,auteur,dureeH){
       doc.setFont('helvetica','bold');doc.setTextColor(...rouge);doc.setFontSize(8)
       doc.text(c.auteur+' — '+new Date(c.created_at).toLocaleString('fr-FR'),margin+3,y);y+=4
       doc.setFont('helvetica','normal');doc.setTextColor(30,30,30);doc.setFontSize(8)
-      const lines=doc.splitTextToSize(c.contenu,W-2*margin-6)
+      const lines=doc.splitTextToSize((c.contenu||'').replace(/[^\x00-\x7F\u00C0-\u024F\u1E00-\u1EFF]/g,'').trim(),W-2*margin-6)
       lines.forEach(l=>{if(y>270){doc.addPage();y=margin};doc.text(l,margin+3,y);y+=4});y+=3
     });y+=2
   }
@@ -3475,7 +3475,7 @@ async function doConfirmerTerminer(){
   if(chronoSeconds>0) extra.duree_reelle=dureeH
   await sb.from('bons_travail').update(extra).eq('id',currentBonId)
 
-  const contenu=comment?'✅ Intervention terminée — '+comment:'✅ Intervention terminée par '+auteur
+  const contenu=comment?'Intervention terminee - '+comment:'Intervention terminee par '+auteur
   await sb.from('commentaires').insert([{bon_id:currentBonId,auteur,contenu}])
 
   const bon=allBons.find(b=>b.id===currentBonId)
