@@ -491,7 +491,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
             <div id="d-side-infos"></div>
           </div>
           <div id="d-reopen-btn"></div>
-          <button class="btn btn-orange" style="width:100%;justify-content:center;margin-top:8px;font-size:12px;padding:8px" onclick="ouvrirMission()">🚗 Accepter la mission</button>
+          <button class="btn btn-orange" id="btn-accepter-mission-detail" style="width:100%;justify-content:center;margin-top:8px;font-size:12px;padding:8px" onclick="ouvrirMission()">🚗 Accepter la mission</button>
           <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px;font-size:12px;padding:8px" onclick="ouvrirPieces()">🔩 Pièces / Consommables</button>
           <div id="d-cout-total" style="margin-top:10px"></div>
           <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:8px;font-size:12px;padding:8px" onclick="ouvrirSuppression()">🗑️ Supprimer ce bon</button>
@@ -1284,6 +1284,22 @@ async function openDetail(id){
   document.getElementById('d-badges').innerHTML=badge(b.statut)+' '+badge(b.priorite)
   document.querySelectorAll('.statut-btn').forEach(btn=>btn.classList.remove('active'))
   const sb2=document.getElementById('sb-'+b.statut);if(sb2) sb2.classList.add('active')
+  // Masquer "Accepter mission" si déjà en cours ou en attente ou terminé
+  const btnMission=document.getElementById('sb-en_cours')
+  if(btnMission){
+    if(b.statut==='en_cours'||b.statut==='en_attente'||b.statut==='termine'){
+      btnMission.style.display='none'
+    } else {
+      btnMission.style.display=''
+    }
+  }
+  const btnMd=document.getElementById('btn-accepter-mission-detail')
+  if(btnMd) btnMd.style.display=(b.statut==='nouveau'||b.statut==='planifie')?'':'none'
+  // Masquer aussi le bouton orange "Accepter la mission" dans la sidebar
+  const btnMissionDetail=document.getElementById('btn-accepter-mission-detail')
+  if(btnMissionDetail){
+    btnMissionDetail.style.display=(b.statut==='nouveau'||b.statut==='planifie')?'':'none'
+  }
   if(b.statut==='en_cours'&&b.date_debut){
     const elapsed=Math.floor((new Date()-new Date(b.date_debut))/1000)
     chronoSeconds=elapsed;document.getElementById('chrono-display').textContent=formatChrono(chronoSeconds)
