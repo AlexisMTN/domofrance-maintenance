@@ -3240,14 +3240,21 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function activerNotifications() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    showToast('Notifications non supportées sur ce navigateur', 'error')
-    return
+  if (!('serviceWorker' in navigator)) {
+    showToast('Service Worker non supporté — installez l\'appli depuis Safari', 'error'); return
+  }
+  if (!('PushManager' in window)) {
+    showToast('Notifications non supportées — installez l\'appli depuis Safari', 'error'); return
   }
   try {
+    // Enregistrer le service worker
+    const reg = await navigator.serviceWorker.register('/sw.js')
+    await navigator.serviceWorker.ready
+
     const perm = await Notification.requestPermission()
     if (perm !== 'granted') { showToast('Notifications refusées', 'error'); return }
-    const reg = await navigator.serviceWorker.ready
+
+    // S'abonner aux push
     let sub = await reg.pushManager.getSubscription()
     if (!sub) {
       sub = await reg.pushManager.subscribe({
@@ -3255,19 +3262,22 @@ async function activerNotifications() {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       })
     }
-    // Sauvegarder la subscription dans Supabase
+
+    // Sauvegarder dans Supabase
     const {data:{user}} = await sb.auth.getUser()
-    if (user) {
-      await sb.from('push_subscriptions').upsert({
-        user_id: user.id,
-        email: user.email,
-        subscription: JSON.stringify(sub)
-      }, { onConflict: 'email' })
-    }
+    if (!user) { showToast('Connectez-vous d\'abord', 'error'); return }
+
+    const {error} = await sb.from('push_subscriptions').upsert({
+      user_id: user.id,
+      email: user.email,
+      subscription: JSON.stringify(sub)
+    }, { onConflict: 'email' })
+
+    if (error) { console.error('Supabase error:', error); showToast('Erreur: '+error.message, 'error'); return }
     showToast('🔔 Notifications activées !')
   } catch(e) {
     console.error('Push error:', e)
-    showToast('Erreur activation notifications', 'error')
+    showToast('Erreur: '+e.message, 'error')
   }
 }
 
