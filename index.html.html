@@ -2963,7 +2963,7 @@ function renderPiecesList(){
     +'</div>'
 }
 
-function ajouterPiece(){
+async function ajouterPiece(){
   const designation = document.getElementById('p-designation').value.trim()
   if(!designation){ showToast('Désignation obligatoire','error'); return }
   const piece = {
