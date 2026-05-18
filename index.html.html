@@ -1730,7 +1730,7 @@ async function createBon(){
   if(!titre) return
   const btn=document.getElementById('btn-create')
   btn.textContent='Création…';btn.disabled=true
-  const payload={titre,categorie:document.getElementById('f-cat').value,priorite:document.getElementById('f-prio').value,statut:'nouveau',batiment_id:document.getElementById('f-bat').value||null,technicien_id:document.getElementById('f-tech').value||null,zone:document.getElementById('f-zone').value||null,date_prevue:document.getElementById('f-date').value||null,description:document.getElementById('f-desc').value||null}
+  const payload={titre,categorie:document.getElementById('f-cat').value,priorite:document.getElementById('f-prio').value,statut:'nouveau',batiment_id:document.getElementById('f-bat').value||null,technicien_id:document.getElementById('f-tech').value||null,zone:document.getElementById('f-zone').value||null,description:document.getElementById('f-desc').value||null}
   const {data:newBon,error}=await sb.from('bons_travail').insert([payload]).select().single()
   if(!error&&newBon&&createPhotoFiles.length>0){
     for(const file of createPhotoFiles){
