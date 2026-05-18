@@ -2033,7 +2033,7 @@ function renderCalendar(){
 function calNav(dir){calDate=new Date(calDate.getFullYear(),calDate.getMonth()+dir,1);renderCalendar()}
 function calToday(){calDate=new Date();renderCalendar()}
 
-const pageTitles={dashboard:'Tableau de bord',bons:'Bons de travail',planning:'Planning',techniciens:'Techniciens',batiments:'Bâtiments',stats:'Statistiques'}
+const pageTitles={dashboard:'Tableau de bord',bons:'Bons de travail','mes-tickets':'Mes tickets',planning:'Planning',controle:'Contrôle Réglementaire',techniciens:'Techniciens',batiments:'Bâtiments',stats:'Statistiques',historique:'Historique',carte:'Carte'}
 async function showPage(name,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
@@ -2041,6 +2041,7 @@ async function showPage(name,el){
   document.getElementById('page-title').textContent=pageTitles[name]||name
   if(el) el.classList.add('active')
   closeSidebar()
+  if(name==='mes-tickets') renderMesTickets()
   if(name==='bons'){
     currentFilter='all'
     document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'))
@@ -3178,6 +3179,8 @@ function demarrerOuReprendre(){
 async function renderMesTickets(){
   const el = document.getElementById('mes-tickets-content')
   if(!el) return
+  el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">Chargement...</div>'
+  try{
   // Recharger les données fraîches
   await loadBons()
   await loadTechs()
@@ -3251,6 +3254,10 @@ async function renderMesTickets(){
   }
 
   el.innerHTML = html
+  }catch(e){
+    el.innerHTML='<div style="padding:20px;color:red">Erreur: '+e.message+'</div>'
+    console.error('renderMesTickets error:',e)
+  }
 }
 
 function ouvrirAttenteForBon(id){currentBonId=id;ouvrirAttente()}
