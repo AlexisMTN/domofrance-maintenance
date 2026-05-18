@@ -1543,12 +1543,26 @@ function previewTerminerPhoto(e){
 }
 
 async function confirmerTerminer(){
-  // Cette fonction est remplacée par le flux signature -> doConfirmerTerminer
-  // Le bouton btn-terminer ouvre maintenant le modal signature
-  const auteur=document.getElementById('terminer-auteur').value.trim()
-  if(!auteur){showToast('Veuillez indiquer votre nom','error');return}
+  // Lire le nom depuis le champ hidden OU le display
+  const auteurHidden = document.getElementById('terminer-auteur')
+  const auteurDisplay = document.getElementById('terminer-auteur-display')
+  let auteur = auteurHidden ? auteurHidden.value.trim() : ''
+  if(!auteur && auteurDisplay) auteur = auteurDisplay.textContent.trim()
+  // Si toujours vide, pré-remplir depuis l'email et continuer
+  if(!auteur || auteur === '—'){
+    sb.auth.getUser().then(({data:{user}})=>{
+      if(user){
+        const parts = user.email.split('@')[0].split('.')
+        const nom = parts.length>=2
+          ? parts[0].charAt(0).toUpperCase()+parts[0].slice(1)+' '+parts[1].charAt(0).toUpperCase()+parts[1].slice(1)
+          : user.email.split('@')[0]
+        if(auteurHidden) auteurHidden.value = nom
+        if(auteurDisplay) auteurDisplay.textContent = nom
+      }
+    })
+  }
   openModal('signature')
-  setTimeout(initSignatureCanvas,100)
+  setTimeout(initSignatureCanvas, 100)
 }
 
 async function genererEtEnvoyerPDF(bon,photos,comments,auteur,dureeH){
@@ -3399,24 +3413,20 @@ function validerSignature(){
 // Override ouvrirTerminer pour inclure signature
 function ouvrirTerminer(){
   // Pré-remplir avec le nom de l'utilisateur connecté
-  const auteurField=document.getElementById('terminer-auteur')
-  if(auteurField&&auteurField.value===''){
-    sb.auth.getUser().then(({data:{user}})=>{
-      if(user){
-        const emailPart=user.email.split('@')[0]
-        const parts=emailPart.split('.')
-        let nom=''
-        if(parts.length>=2){
-          nom=parts[0].charAt(0).toUpperCase()+parts[0].slice(1)+' '+parts[1].charAt(0).toUpperCase()+parts[1].slice(1)
-        } else {
-          nom=user.user_metadata?.full_name||emailPart
-        }
-        auteurField.value=nom
-        const display=document.getElementById('terminer-auteur-display')
-        if(display) display.textContent=nom
-      }
-    })
-  }
+  // Pré-remplir le nom depuis l'email
+  sb.auth.getUser().then(({data:{user}})=>{
+    if(user){
+      const emailPart=user.email.split('@')[0]
+      const parts=emailPart.split('.')
+      const nom=parts.length>=2
+        ? parts[0].charAt(0).toUpperCase()+parts[0].slice(1)+' '+parts[1].charAt(0).toUpperCase()+parts[1].slice(1)
+        : (user.user_metadata?.full_name||emailPart)
+      const auteurField=document.getElementById('terminer-auteur')
+      const display=document.getElementById('terminer-auteur-display')
+      if(auteurField) auteurField.value=nom
+      if(display) display.textContent=nom
+    }
+  })
   document.getElementById('terminer-comment').value=''
   document.getElementById('terminer-photo-preview').innerHTML=''
   document.getElementById('terminer-photo').value=''
