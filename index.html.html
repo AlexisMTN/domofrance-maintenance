@@ -217,7 +217,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray);color:va
       <div id="topbar-logo-mobile" style="display:none;height:36px;margin-right:8px"></div>
       <div class="page-title" id="page-title">Tableau de bord</div>
       <button class="btn btn-primary" onclick="openModal('create')">+ Nouveau bon</button>
-      <button id="notif-btn" onclick="demanderPermissionNotifs()" title="Activer les notifications" style="background:none;border:1px solid var(--border);border-radius:8px;padding:7px 10px;cursor:pointer;font-size:16px">🔔</button>
+      
       <div class="topbar-user" onclick="doLogout()" title="Se déconnecter">
         <div style="width:30px;height:30px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700" id="topbar-avatar">?</div>
         <div style="display:flex;flex-direction:column">
@@ -1773,11 +1773,7 @@ async function createBon(){
       const tech=allTechs.find(t=>t.id===payload.technicien_id)
       if(tech&&newBon){
         notifierAssignation(newBon,tech.prenom+' '+tech.nom)
-        // Notification push au technicien assigné
-        envoyerNotificationPush([tech.email],
-          'Mission assignée — '+newBon.titre,
-          'Vous avez été assigné à une intervention'+(payload.batiment_id?' chez '+(allBats.find(b=>b.id===payload.batiment_id)?.nom||''):'')
-        )
+
       }
     }
   } else showToast('Erreur: '+error.message,'error')
@@ -3230,73 +3226,10 @@ async function renderMesMissions(){
 
 
 // ── NOTIFICATIONS PUSH ──
-const VAPID_PUBLIC_KEY = 'BCcAMfdPtdsGKs82O-SrTfNGVWMexkQOZVxp-KhmY7lRONoXw3J1xDuaPNeIT6wiTeFGVYFFB28AVClEonF-k40'
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const rawData = window.atob(base64)
-  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
-}
 
-async function activerNotifications() {
-  if (!('serviceWorker' in navigator)) {
-    showToast('Service Worker non supporté — installez l\'appli depuis Safari', 'error'); return
-  }
-  if (!('PushManager' in window)) {
-    showToast('Notifications non supportées — installez l\'appli depuis Safari', 'error'); return
-  }
-  try {
-    // Enregistrer le service worker
-    const reg = await navigator.serviceWorker.register('/sw.js')
-    await navigator.serviceWorker.ready
-
-    const perm = await Notification.requestPermission()
-    if (perm !== 'granted') { showToast('Notifications refusées', 'error'); return }
-
-    // S'abonner aux push
-    let sub = await reg.pushManager.getSubscription()
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      })
-    }
-
-    // Sauvegarder dans Supabase
-    const {data:{user}} = await sb.auth.getUser()
-    if (!user) { showToast('Connectez-vous d\'abord', 'error'); return }
-
-    const {error} = await sb.from('push_subscriptions').upsert({
-      user_id: user.id,
-      email: user.email,
-      subscription: JSON.stringify(sub)
-    }, { onConflict: 'email' })
-
-    if (error) { console.error('Supabase error:', error); showToast('Erreur: '+error.message, 'error'); return }
-    showToast('🔔 Notifications activées !')
-  } catch(e) {
-    console.error('Push error:', e)
-    showToast('Erreur: '+e.message, 'error')
-  }
-}
-
-async function envoyerNotificationPush(emails, title, body) {
-  try {
-    const { data: subs } = await sb.from('push_subscriptions')
-      .select('subscription').in('email', emails)
-    if (!subs || subs.length === 0) return
-    for (const row of subs) {
-      const sub = JSON.parse(row.subscription)
-      await fetch(SUPABASE_URL + '/functions/v1/send-push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_KEY },
-        body: JSON.stringify({ subscription: sub, title, body })
-      })
-    }
-  } catch(e) { console.error('Push notification error:', e) }
-}
-
+async 
+async 
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
 
